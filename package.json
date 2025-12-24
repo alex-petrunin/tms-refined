@@ -16,7 +16,6 @@
     "test": "echo 'no tests'",
     "pack": "rm -rf tms.zip && npx --yes bestzip tms.zip dist/*",
     "upload": "youtrack-app upload dist",
-
     "upload-local": "set -a && source .env && set +a && youtrack-app upload dist --host $YOUTRACK_HOST --token $YOUTRACK_TOKEN",
     "update": "npm run build && npm run upload-local",
     "prepare:watch": "npm run clean && vite -c vite.config.backend.ts build --mode development",
@@ -55,6 +54,7 @@
     "typescript-eslint": "^8.0.1",
     "vite": "^6.0.1",
     "vite-plugin-static-copy": "^2.2.0",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^4.0.16"
   }
 }
