@@ -1,6 +1,6 @@
-import { ExecutionTargetSnapshot } from "./ExecutionTarget";
 import { TestCaseID } from "./TestCase";
 import { TestSuiteID } from "./TestSuite";
+import {ExecutionTargetSnapshot} from "@backend/domain/valueObjects/ExecutionTarget.ts";
 
 export type TestRunID = string;
 
@@ -19,7 +19,14 @@ export class TestRun{
         public testCaseIDs: TestCaseID[],
         public testSuiteID: TestSuiteID,
         public executionTarget: ExecutionTargetSnapshot,
-    ){}
+    ){
+        if (testCaseIDs.length === 0) {
+            throw new Error("TestRun must have at least one TestCase.");
+        }
+        if (executionTarget === undefined) {
+            throw new Error("TestRun must have an ExecutionTarget.");
+        }
+    }
 
     start(){
         if (this.status === TestStatus.PENDING) {
