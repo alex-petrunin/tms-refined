@@ -1,0 +1,18 @@
+/**
+ * @zod-to-schema
+ */
+export type HealthCheckRes = {
+    status: 'ok' | 'error';
+    timestamp: string;
+    version: string;
+};
+
+export default function handle(ctx: CtxGet<HealthCheckRes>): void {
+    ctx.response.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0'
+    });
+}
+
+export type Handle = typeof handle;
