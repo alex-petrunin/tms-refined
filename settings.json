@@ -1,0 +1,38 @@
+{
+  "properties": {
+    "testCaseProjectId": {
+      "type": "string",
+      "title": "Test Case Project ID",
+      "description": "YouTrack project ID where test cases are stored as issues",
+      "x-scope": "PROJECT"
+    },
+    "testRunProjectId": {
+      "type": "string",
+      "title": "Test Run Project ID",
+      "description": "YouTrack project ID where test runs are stored as issues",
+      "x-scope": "PROJECT"
+    },
+    "testCaseIssueType": {
+      "type": "string",
+      "title": "Test Case Issue Type",
+      "description": "Issue type name for test cases (e.g., 'Test Case')",
+      "x-scope": "PROJECT",
+      "default": "Test Case"
+    },
+    "testRunIssueType": {
+      "type": "string",
+      "title": "Test Run Issue Type",
+      "description": "Issue type name for test runs (e.g., 'Test Run')",
+      "x-scope": "PROJECT",
+      "default": "Test Run"
+    },
+    "testSuiteCustomFieldName": {
+      "type": "string",
+      "title": "Test Suite Custom Field Name",
+      "description": "Name of the custom field used to store test suites",
+      "x-scope": "PROJECT",
+      "default": "Test Suites"
+    }
+  }
+}
+

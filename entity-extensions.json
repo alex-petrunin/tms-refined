@@ -1,0 +1,76 @@
+{
+  "entityTypeExtensions": [
+    {
+      "entityType": "Issue",
+      "properties": {
+        "testCaseId": {
+          "type": "string",
+          "description": "Unique identifier for the test case"
+        },
+        "testCaseSummary": {
+          "type": "string",
+          "description": "Summary of the test case"
+        },
+        "testCaseDescription": {
+          "type": "string",
+          "description": "Description of the test case"
+        },
+        "executionTargetId": {
+          "type": "string",
+          "description": "Execution target ID"
+        },
+        "executionTargetName": {
+          "type": "string",
+          "description": "Execution target name"
+        },
+        "executionTargetType": {
+          "type": "string",
+          "description": "Execution target type (GITLAB, GITHUB, MANUAL)"
+        },
+        "executionTargetRef": {
+          "type": "string",
+          "description": "Execution target reference (pipeline/workflow ID)"
+        },
+        "testRunId": {
+          "type": "string",
+          "description": "Unique identifier for the test run"
+        },
+        "testRunStatus": {
+          "type": "string",
+          "description": "Test run status (PENDING, RUNNING, PASSED, FAILED, AWAITING_EXTERNAL_RESULTS)"
+        },
+        "testSuiteId": {
+          "type": "string",
+          "description": "Test suite ID for test runs"
+        },
+        "testCaseIds": {
+          "type": "string",
+          "description": "Comma-separated list of test case IDs (for test runs)"
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "description": "Idempotency key for test run deduplication"
+        }
+      }
+    },
+    {
+      "entityType": "Project",
+      "properties": {
+        "testSuites": {
+          "type": "string",
+          "description": "JSON string containing test suites data"
+        }
+      }
+    },
+    {
+      "entityType": "AppGlobalStorage",
+      "properties": {
+        "testRunIdempotencyIndex": {
+          "type": "string",
+          "description": "JSON mapping of idempotency keys to test run IDs"
+        }
+      }
+    }
+  ]
+}
+
