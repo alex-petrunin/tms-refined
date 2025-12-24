@@ -21,6 +21,118 @@ export const projectDemoResSchema = z.object({
   }),
 });
 
+export const getTestRunReqSchema = z.object({
+  id: z.string().optional(),
+});
+
+export const getTestRunResSchema = z.object({
+  id: z.string(),
+  testCaseIDs: z.array(z.string()),
+  testSuiteID: z.string(),
+  status: z.string(),
+  executionTarget: z.object({
+    id: z.string(),
+    name: z.string(),
+    type: z.string(),
+    ref: z.string(),
+  }),
+});
+
+export const createTestRunReqSchema = z.object({
+  suiteID: z.string(),
+  testCaseIDs: z.array(z.string()),
+  executionMode: z
+    .union([z.literal("MANAGED"), z.literal("OBSERVED")])
+    .optional(),
+});
+
+export const createTestRunResSchema = z.object({
+  testRunIDs: z.array(z.string()),
+});
+
+export const getTestCaseReqSchema = z.object({
+  id: z.string().optional(),
+});
+
+export const getTestCaseResSchema = z.object({
+  id: z.string(),
+  summary: z.string(),
+  description: z.string(),
+  executionTargetSnapshot: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      type: z.string(),
+      ref: z.string(),
+    })
+    .optional(),
+});
+
+export const createTestCaseReqSchema = z.object({
+  summary: z.string(),
+  description: z.string().optional(),
+});
+
+export const createTestCaseResSchema = z.object({
+  id: z.string(),
+  summary: z.string(),
+  description: z.string(),
+  executionTargetSnapshot: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      type: z.string(),
+      ref: z.string(),
+    })
+    .optional(),
+});
+
+export const getTestSuiteReqSchema = z.object({
+  id: z.string().optional(),
+});
+
+export const getTestSuiteResSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  testCaseIDs: z.array(z.string()),
+});
+
+export const createTestSuiteReqSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+});
+
+export const createTestSuiteResSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  testCaseIDs: z.array(z.string()),
+});
+
+export const updateTestSuiteReqSchema = z.object({
+  name: z.string().optional(),
+  description: z.string().optional(),
+  testCaseIDs: z.array(z.string()).optional(),
+});
+
+export const updateTestSuiteResSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  testCaseIDs: z.array(z.string()),
+});
+
+export const testRunResultReqSchema = z.object({
+  testRunID: z.string(),
+  passed: z.boolean(),
+});
+
+export const testRunResultResSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+});
+
 // Nested schema object for validation system
 export const schema = {
   global: {
@@ -35,6 +147,46 @@ export const schema = {
       GET: {
         Req: projectDemoReqSchema,
         Res: projectDemoResSchema
+      }
+    },
+    testRuns: {
+      GET: {
+        Req: getTestRunReqSchema,
+        Res: getTestRunResSchema
+      },
+      POST: {
+        Req: createTestRunReqSchema,
+        Res: createTestRunResSchema
+      },
+      results: {
+        POST: {
+          Req: testRunResultReqSchema,
+          Res: testRunResultResSchema
+        }
+      }
+    },
+    testCases: {
+      GET: {
+        Req: getTestCaseReqSchema,
+        Res: getTestCaseResSchema
+      },
+      POST: {
+        Req: createTestCaseReqSchema,
+        Res: createTestCaseResSchema
+      }
+    },
+    testSuites: {
+      GET: {
+        Req: getTestSuiteReqSchema,
+        Res: getTestSuiteResSchema
+      },
+      POST: {
+        Req: createTestSuiteReqSchema,
+        Res: createTestSuiteResSchema
+      },
+      PUT: {
+        Req: updateTestSuiteReqSchema,
+        Res: updateTestSuiteResSchema
       }
     }
   }

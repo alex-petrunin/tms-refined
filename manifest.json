@@ -1,6 +1,6 @@
 {
   "name": "tms",
-  "title": "Tms",
+  "title": "Test Management System",
   "description": "A YouTrack app created with TypeScript",
   "$schema": "https://json.schemastore.org/youtrack-app.json",
   "vendor": {
@@ -11,7 +11,7 @@
   "widgets": [
     {
       "key": "enhanced-dx",
-      "name": "Enhanced DX",
+      "name": "Test Management",
       "indexPath": "enhanced-dx/index.html",
       "extensionPoint": "MAIN_MENU_ITEM",
       "iconPath": "enhanced-dx/widget-icon.svg",

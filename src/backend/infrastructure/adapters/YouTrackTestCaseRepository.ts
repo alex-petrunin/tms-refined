@@ -20,7 +20,10 @@ export class YouTrackTestCaseRepository implements TestCaseRepository {
     ) {}
 
     async save(testCase: TestCase): Promise<void> {
-        const projectId = this.settings.testCaseProjectId as string || this.project.id;
+        // Get project from settings (array of Project entities) or use current project
+        const testCaseProjects = (this.settings.testCaseProjects as Project[] | undefined) || [];
+        // Use first project from array, or current project if array is empty
+        const projectId = testCaseProjects.length > 0 ? testCaseProjects[0].id : this.project.id;
         const issueType = (this.settings.testCaseIssueType as string) || "Test Case";
 
         // Check if issue already exists (by testCaseId extension property)

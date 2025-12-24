@@ -26,7 +26,10 @@ export class YouTrackTestRunRepository implements TestRunRepository {
     }
 
     async save(testRun: TestRun, idempotencyKey?: IdempotencyKey): Promise<void> {
-        const projectId = this.settings.testRunProjectId as string || this.project.id;
+        // Get project from settings (array of Project entities) or use current project
+        const testRunProjects = (this.settings.testRunProjects as Project[] | undefined) || [];
+        // Use first project from array, or current project if array is empty
+        const projectId = testRunProjects.length > 0 ? testRunProjects[0].id : this.project.id;
         const issueType = (this.settings.testRunIssueType as string) || "Test Run";
 
         // Check if issue already exists

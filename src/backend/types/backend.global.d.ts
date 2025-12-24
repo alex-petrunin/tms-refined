@@ -41,8 +41,9 @@ type HttpResponse<R = unknown> = {
 declare global {
   type AppSettings = Record<string, unknown> & {
     // Test Management System settings
-    testCaseProjectId?: string;
-    testRunProjectId?: string;
+    testCaseProjects?: Project[];
+    testRunProjects?: Project[];
+    testSuiteProjects?: Project[];
     testCaseIssueType?: string;
     testRunIssueType?: string;
     testSuiteCustomFieldName?: string;
