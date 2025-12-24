@@ -11,6 +11,8 @@ export function createMockRepository<T>() {
   return {
     save: vi.fn(),
     findByID: vi.fn(),
+    findById: vi.fn(),
+    findByIdempotencyKey: vi.fn(),
     findAll: vi.fn(),
     delete: vi.fn(),
   } as unknown as T;
