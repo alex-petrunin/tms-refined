@@ -1,9 +1,9 @@
-import { ExecutionTargetSnapshot } from "../../domain/entities/ExecutionTarget";
 import { TestCaseID } from "../../domain/entities/TestCase";
 import { TestRun, TestRunID } from "../../domain/entities/TestRun";
 import { TestSuiteID } from "../../domain/entities/TestSuite";
 import { ExecutionTriggerPort } from "../ports/ExecutionTriggerPort";
 import { TestRunRepository } from "../ports/TestRunRepository";
+import {ExecutionTargetSnapshot} from "@backend/domain/valueObjects/ExecutionTarget.ts";
 
 export interface RunTestCasesInput {
     suiteID: TestSuiteID;
