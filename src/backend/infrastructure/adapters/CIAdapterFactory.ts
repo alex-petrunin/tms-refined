@@ -4,6 +4,7 @@ import { ExecutionTargetSnapshot } from "../../domain/valueObjects/ExecutionTarg
 import { GitLabExecutionAdapter, GitLabConfig } from "./GitLabExecutionAdapter";
 import { GitHubExecutionAdapter, GitHubConfig } from "./GitHubExecutionAdapter";
 import { ManualExecutionAdapter } from "./ManualExecutionAdapter";
+import { TestRunRepository } from "../../application/ports/TestRunRepository";
 
 /**
  * Configuration for creating CI adapters
@@ -17,7 +18,10 @@ export interface CIAdapterConfig {
  * Factory for creating ExecutionTriggerPort adapters based on ExecutionTargetType
  */
 export class CIAdapterFactory {
-    constructor(private config: CIAdapterConfig) {}
+    constructor(
+        private config: CIAdapterConfig,
+        private testRunRepository?: TestRunRepository
+    ) {}
 
     /**
      * Creates an ExecutionTriggerPort adapter based on the execution target type
@@ -34,7 +38,7 @@ export class CIAdapterFactory {
                         `but was not provided to CIAdapterFactory.`
                     );
                 }
-                return new GitLabExecutionAdapter(this.config.gitlab);
+                return new GitLabExecutionAdapter(this.config.gitlab, this.testRunRepository);
 
             case ExecutionTargetType.GITHUB:
                 if (!this.config.github) {

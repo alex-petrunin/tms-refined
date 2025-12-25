@@ -25,7 +25,7 @@ describe('CIAdapterFactory', () => {
                 repo: 'test-repo',
             },
         };
-        factory = new CIAdapterFactory(config);
+        factory = new CIAdapterFactory(config, undefined);
     });
 
     describe('createAdapter', () => {
@@ -62,7 +62,7 @@ describe('CIAdapterFactory', () => {
         it('should throw error if GitLab config is missing for GITLAB target', () => {
             const factoryWithoutGitLab = new CIAdapterFactory({
                 github: config.github,
-            });
+            }, undefined);
 
             const executionTarget = createExecutionTargetSnapshot({
                 type: ExecutionTargetType.GITLAB,
@@ -76,7 +76,7 @@ describe('CIAdapterFactory', () => {
         it('should throw error if GitHub config is missing for GITHUB target', () => {
             const factoryWithoutGitHub = new CIAdapterFactory({
                 gitlab: config.gitlab,
-            });
+            }, undefined);
 
             const executionTarget = createExecutionTargetSnapshot({
                 type: ExecutionTargetType.GITHUB,
@@ -106,7 +106,7 @@ describe('CIAdapterFactory', () => {
         it('should return false for GITLAB when config is missing', () => {
             const factoryWithoutGitLab = new CIAdapterFactory({
                 github: config.github,
-            });
+            }, undefined);
             expect(factoryWithoutGitLab.canCreateAdapter(ExecutionTargetType.GITLAB)).toBe(false);
         });
 
@@ -117,12 +117,12 @@ describe('CIAdapterFactory', () => {
         it('should return false for GITHUB when config is missing', () => {
             const factoryWithoutGitHub = new CIAdapterFactory({
                 gitlab: config.gitlab,
-            });
+            }, undefined);
             expect(factoryWithoutGitHub.canCreateAdapter(ExecutionTargetType.GITHUB)).toBe(false);
         });
 
         it('should return true for MANUAL (always available)', () => {
-            const emptyFactory = new CIAdapterFactory({});
+            const emptyFactory = new CIAdapterFactory({}, undefined);
             expect(emptyFactory.canCreateAdapter(ExecutionTargetType.MANUAL)).toBe(true);
         });
 

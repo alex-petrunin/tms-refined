@@ -1,6 +1,7 @@
 import { ExecutionTriggerPort } from "../../application/ports/ExecutionTriggerPort";
 import { TestRun } from "../../domain/entities/TestRun";
 import { ExecutionTargetType } from "../../domain/enums/ExecutionTargetType";
+import { TestRunRepository } from "../../application/ports/TestRunRepository";
 
 /**
  * Configuration for GitLab CI integration
@@ -33,7 +34,10 @@ interface GitLabPipelineResponse {
  * Example ref values: 'main', 'develop', 'feature/branch', 'v1.0.0'
  */
 export class GitLabExecutionAdapter implements ExecutionTriggerPort {
-    constructor(private config: GitLabConfig) {
+    constructor(
+        private config: GitLabConfig,
+        private testRunRepository?: TestRunRepository
+    ) {
         if (!config.baseUrl || !config.apiToken || !config.projectId) {
             throw new Error("GitLabExecutionAdapter requires baseUrl, apiToken, and projectId");
         }
@@ -64,6 +68,11 @@ export class GitLabExecutionAdapter implements ExecutionTriggerPort {
                 `for TestRun ${testRun.id} on ref '${ref}'. ` +
                 `Pipeline URL: ${pipeline.web_url}`
             );
+
+            // Store pipeline ID for webhook lookup
+            if (this.testRunRepository) {
+                await this.testRunRepository.associatePipelineId(testRun.id, String(pipeline.id));
+            }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error(

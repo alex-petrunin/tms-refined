@@ -545,5 +545,77 @@ export class YouTrackTestRunRepository implements TestRunRepository {
             this.globalStorage.extensionProperties.testRunIdempotencyIndex = JSON.stringify(index);
         }
     }
+
+    async associatePipelineId(testRunID: TestRunID, pipelineId: string): Promise<void> {
+        const issue = await this.findIssueByTestRunId(testRunID);
+        if (!issue) {
+            throw new Error(`TestRun with ID '${testRunID}' not found`);
+        }
+
+        const updatePayload: any = {
+            extensionProperties: {
+                ...issue.extensionProperties,
+                gitlabPipelineId: pipelineId,
+            },
+        };
+
+        // Use REST API via app host
+        if (this.appHost && this.appHost.fetchYouTrack) {
+            await this.appHost.fetchYouTrack(`issues/${issue.id}`, {
+                method: 'POST',
+                body: updatePayload,
+            });
+            return;
+        }
+
+        // Fallback: Try scripting API
+        try {
+            const entities = require('@jetbrains/youtrack-scripting-api/entities');
+            const issueEntity = entities.Issue.findById(issue.id);
+            if (issueEntity) {
+                issueEntity.extensionProperties.gitlabPipelineId = pipelineId;
+            }
+        } catch (e) {
+            throw new Error(`Failed to associate pipeline ID: ${e instanceof Error ? e.message : 'Unknown error'}`);
+        }
+    }
+
+    async findByPipelineId(pipelineId: string): Promise<TestRun | null> {
+        // Use YouTrack scripting API if available
+        try {
+            const entities = require('@jetbrains/youtrack-scripting-api/entities');
+            const issues = entities.Issue.findByExtensionProperties({
+                gitlabPipelineId: pipelineId,
+            });
+
+            if (issues && issues.size > 0) {
+                const issue = Array.from(issues)[0];
+                return this.mapIssueToTestRun({
+                    id: issue.id,
+                    summary: issue.summary,
+                    description: issue.description,
+                    extensionProperties: issue.extensionProperties,
+                    links: issue.links,
+                } as Issue);
+            }
+        } catch (e) {
+            // Scripting API not available, use REST API
+        }
+
+        // Fallback to REST API via app host
+        if (this.appHost && this.appHost.fetchYouTrack) {
+            const query = `project:${this.project.id} extensionProperties.gitlabPipelineId:${pipelineId}`;
+            const issues = await this.appHost.fetchYouTrack(
+                `issues?query=${encodeURIComponent(query)}&fields=id,summary,description,extensionProperties,links,customFields(name,value(name))`,
+                {}
+            );
+
+            if (Array.isArray(issues) && issues.length > 0) {
+                return this.mapIssueToTestRun(issues[0] as Issue);
+            }
+        }
+
+        return null;
+    }
 }
 

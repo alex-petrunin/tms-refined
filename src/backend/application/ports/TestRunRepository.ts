@@ -17,4 +17,18 @@ export interface TestRunRepository {
    * @returns The TestRun if found, null otherwise
    */
   findByIdempotencyKey(idempotencyKey: IdempotencyKey): Promise<TestRun | null>;
+  /**
+   * Associates a pipeline ID with a test run.
+   * Used to track external CI pipeline executions (e.g., GitLab pipeline ID).
+   * @param testRunID The test run ID
+   * @param pipelineId The external pipeline ID
+   */
+  associatePipelineId(testRunID: TestRunID, pipelineId: string): Promise<void>;
+  /**
+   * Finds a TestRun by its associated pipeline ID.
+   * Used to look up test runs from CI webhook events.
+   * @param pipelineId The external pipeline ID
+   * @returns The TestRun if found, null otherwise
+   */
+  findByPipelineId(pipelineId: string): Promise<TestRun | null>;
 }
