@@ -3,7 +3,7 @@ import { GitLabWebhookResultAdapter, GitLabPipelineWebhookPayload } from '@infra
 import { HandleExecutionResultUseCase } from '@app/usecases/HandleExecutionResult';
 import { TestRunRepository } from '@app/ports/TestRunRepository';
 import { TestRun } from '@domain/entities/TestRun';
-import { createTestRunID, createTestRun } from '../utils/test-factories';
+import { createTestRun } from '../utils/test-factories';
 
 describe('GitLabWebhookResultAdapter', () => {
     let adapter: GitLabWebhookResultAdapter;
@@ -274,32 +274,38 @@ describe('GitLabWebhookResultAdapter', () => {
 
     describe('edge cases', () => {
         it('should handle pipeline with finished_at null', async () => {
-            const testRunID = createTestRunID();
+            const testRun = createTestRun();
+            const pipelineId = '2201272647';
             const payload: GitLabPipelineWebhookPayload = createGitLabPipelinePayload({
                 status: 'success',
-                variables: [
-                    { key: 'TEST_RUN_ID', value: testRunID },
-                ],
+                id: Number(pipelineId),
             });
             payload.object_attributes.finished_at = null;
 
+            (mockTestRunRepository.findByPipelineId as ReturnType<typeof vi.fn>)
+                .mockResolvedValue(testRun);
+
             await adapter.onWebhook(payload);
 
+            expect(mockTestRunRepository.findByPipelineId).toHaveBeenCalledWith(pipelineId);
             expect(mockHandleResultUC.execute).toHaveBeenCalled();
         });
 
         it('should handle pipeline with duration null', async () => {
-            const testRunID = createTestRunID();
+            const testRun = createTestRun();
+            const pipelineId = '2201272647';
             const payload: GitLabPipelineWebhookPayload = createGitLabPipelinePayload({
                 status: 'success',
-                variables: [
-                    { key: 'TEST_RUN_ID', value: testRunID },
-                ],
+                id: Number(pipelineId),
             });
             payload.object_attributes.duration = null;
 
+            (mockTestRunRepository.findByPipelineId as ReturnType<typeof vi.fn>)
+                .mockResolvedValue(testRun);
+
             await adapter.onWebhook(payload);
 
+            expect(mockTestRunRepository.findByPipelineId).toHaveBeenCalledWith(pipelineId);
             expect(mockHandleResultUC.execute).toHaveBeenCalled();
         });
 
