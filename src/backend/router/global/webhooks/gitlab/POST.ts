@@ -4,10 +4,9 @@ import { GitLabWebhookResultAdapter } from "@/backend/infrastructure/adapters/Gi
 import { YouTrackTestRunRepository } from "@/backend/infrastructure/adapters/YouTrackTestRunRepository";
 
 /**
- * GitLab Pipeline Webhook Request
- * Accepts the full GitLab pipeline webhook payload
+ * @zod-to-schema
  */
-export type GitLabWebhookReq = Record<string, unknown>;
+export type GitLabWebhookReq = {};
 
 /**
  * @zod-to-schema
