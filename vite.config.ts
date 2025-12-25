@@ -85,6 +85,7 @@ export default defineConfig({
       input: {
         // List every widget entry point here
         enhancedDX: resolve(__dirname, 'src/widgets/enhanced-dx/index.html'),
+        testManagement: resolve(__dirname, 'src/widgets/test-management/index.html'),
       },
       external: [
         // Exclude Vite plugins and their Node.js dependencies from bundling

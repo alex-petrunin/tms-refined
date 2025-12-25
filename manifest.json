@@ -16,6 +16,14 @@
       "extensionPoint": "MAIN_MENU_ITEM",
       "iconPath": "enhanced-dx/widget-icon.svg",
       "description": "description"
+    },
+    {
+      "key": "test-management",
+      "name": "Test Management System",
+      "indexPath": "test-management/index.html",
+      "extensionPoint": "MAIN_MENU_ITEM",
+      "iconPath": "test-management/widget-icon.svg",
+      "description": "Comprehensive test suite, test case, and test run management"
     }
   ]
 }

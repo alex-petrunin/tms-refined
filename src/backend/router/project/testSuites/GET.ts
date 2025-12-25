@@ -1,11 +1,14 @@
 import {Project} from "@/api/youtrack-types";
-import { InMemoryTestSuiteRepository } from "@/backend/infrastructure/inMemory/InMemoryTestSuiteRepository";
+import { YouTrackTestSuiteRepository } from "@/backend/infrastructure/adapters/YouTrackTestSuiteRepository";
 
 /**
  * @zod-to-schema
  */
 export type GetTestSuiteReq = {
     id?: string;
+    limit?: number;
+    offset?: number;
+    search?: string;
 };
 
 /**
@@ -18,41 +21,87 @@ export type GetTestSuiteRes = {
     testCaseIDs: string[];
 };
 
-export default function handle(ctx: CtxGet<GetTestSuiteRes, GetTestSuiteReq>): void {
+/**
+ * @zod-to-schema
+ */
+export type ListTestSuitesRes = {
+    items: Array<GetTestSuiteRes>;
+    total: number;
+};
+
+export default function handle(ctx: CtxGet<GetTestSuiteRes | ListTestSuitesRes, GetTestSuiteReq>): void {
     const project = ctx.project as Project;
     
     // Extract test suite ID from path or query parameter
-    // Path format: /project/testSuites/{id} or query parameter: ?id={id}
     const testSuiteId = ctx.request.getParameter('id') || extractIdFromPath(ctx.request.path);
+    const query = ctx.request.query;
 
-    if (!testSuiteId) {
-        ctx.response.code = 400;
-        ctx.response.json({ error: 'Test suite ID is required' } as any);
+    // Instantiate repository with YouTrack adapter
+    const repository = new YouTrackTestSuiteRepository(
+        project,
+        ctx.settings,
+        undefined // appHost - optional, will use scripting API if available
+    );
+
+    // If ID is provided, return single test suite
+    if (testSuiteId) {
+        repository.findByID(testSuiteId).then((testSuite) => {
+            if (!testSuite) {
+                ctx.response.code = 404;
+                ctx.response.json({ error: 'Test suite not found' } as any);
+                return;
+            }
+
+            const response: GetTestSuiteRes = {
+                id: testSuite.id,
+                name: testSuite.name,
+                description: testSuite.description,
+                testCaseIDs: testSuite.testCaseIDs
+            };
+
+            ctx.response.json(response);
+        }).catch((error) => {
+            ctx.response.code = 500;
+            ctx.response.json({ error: error.message || 'Failed to retrieve test suite' } as any);
+        });
         return;
     }
 
-    // Instantiate repository
-    const repository = new InMemoryTestSuiteRepository();
+    // Otherwise, return list of test suites
+    const limit = query.limit ? parseInt(query.limit as string, 10) : 100;
+    const offset = query.offset ? parseInt(query.offset as string, 10) : 0;
+    const search = query.search as string | undefined;
 
-    // Retrieve test suite
-    repository.findByID(testSuiteId).then((testSuite) => {
-        if (!testSuite) {
-            ctx.response.code = 404;
-            ctx.response.json({ error: 'Test suite not found' } as any);
-            return;
+    // Load all test suites from project extension properties
+    repository['loadAllTestSuites']().then((allSuites) => {
+        // Apply search filter if provided
+        let filteredSuites = allSuites;
+        if (search) {
+            const searchLower = search.toLowerCase();
+            filteredSuites = allSuites.filter(suite => 
+                suite.name.toLowerCase().includes(searchLower) ||
+                suite.description.toLowerCase().includes(searchLower)
+            );
         }
 
-        const response: GetTestSuiteRes = {
-            id: testSuite.id,
-            name: testSuite.name,
-            description: testSuite.description,
-            testCaseIDs: testSuite.testCaseIDs
+        // Apply pagination
+        const total = filteredSuites.length;
+        const paginatedSuites = filteredSuites.slice(offset, offset + limit);
+
+        const response: ListTestSuitesRes = {
+            items: paginatedSuites.map(suite => ({
+                id: suite.id,
+                name: suite.name,
+                description: suite.description,
+                testCaseIDs: suite.testCaseIDs
+            })),
+            total
         };
 
         ctx.response.json(response);
     }).catch((error) => {
         ctx.response.code = 500;
-        ctx.response.json({ error: error.message || 'Failed to retrieve test suite' } as any);
+        ctx.response.json({ error: error.message || 'Failed to list test suites' } as any);
     });
 }
 
@@ -66,4 +115,3 @@ function extractIdFromPath(path: string): string | undefined {
 }
 
 export type Handle = typeof handle;
-
