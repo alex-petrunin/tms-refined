@@ -10,14 +10,16 @@ import Button from '@jetbrains/ring-ui-built/components/button/button';
 
 interface TestSuitesViewProps {
   api: ReturnType<typeof import('@/api').createApi<ApiRouter>>;
+  projectId?: string;
 }
 
-export const TestSuitesView = memo<TestSuitesViewProps>(({api}) => {
+export const TestSuitesView = memo<TestSuitesViewProps>(({api, projectId}) => {
   const [showForm, setShowForm] = useState(false);
   const [editingSuite, setEditingSuite] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   
   const {testSuites, total, loading, error, refetch} = useTestSuites(api, {
+    projectId,
     search,
     limit: 50
   });

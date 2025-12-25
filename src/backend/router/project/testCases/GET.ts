@@ -6,6 +6,7 @@ import { YouTrackTestSuiteRepository } from "@/backend/infrastructure/adapters/Y
  * @zod-to-schema
  */
 export type GetTestCaseReq = {
+    projectId?: string;
     id?: string;
     limit?: number;
     offset?: number;

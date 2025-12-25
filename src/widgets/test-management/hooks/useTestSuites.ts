@@ -9,6 +9,7 @@ interface TestSuite {
 }
 
 interface UseTestSuitesOptions {
+  projectId?: string;
   limit?: number;
   offset?: number;
   search?: string;
@@ -36,6 +37,7 @@ export function useTestSuites(
     setError(null);
     try {
       const params: Record<string, unknown> = {};
+      if (options.projectId) params.projectId = options.projectId;
       if (options.limit !== undefined) params.limit = options.limit;
       if (options.offset !== undefined) params.offset = options.offset;
       if (options.search) params.search = options.search;
@@ -56,7 +58,7 @@ export function useTestSuites(
     } finally {
       setLoading(false);
     }
-  }, [api, options.limit, options.offset, options.search]);
+  }, [api, options.projectId, options.limit, options.offset, options.search]);
 
   useEffect(() => {
     fetchTestSuites();

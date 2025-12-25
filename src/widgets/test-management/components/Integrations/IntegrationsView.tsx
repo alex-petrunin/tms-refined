@@ -4,9 +4,10 @@ import {IntegrationCard} from './IntegrationCard';
 
 interface IntegrationsViewProps {
   api: ReturnType<typeof import('@/api').createApi<ApiRouter>>;
+  projectId?: string;
 }
 
-export const IntegrationsView = memo<IntegrationsViewProps>(({api}) => {
+export const IntegrationsView = memo<IntegrationsViewProps>(({api, projectId}) => {
   const integrations = [
     {id: 'gitlab', name: 'GitLab CI', type: 'GITLAB', enabled: false},
     {id: 'github', name: 'GitHub Actions', type: 'GITHUB', enabled: false},

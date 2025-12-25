@@ -15,6 +15,7 @@ interface TestRun {
 }
 
 interface UseTestRunsOptions {
+  projectId?: string;
   limit?: number;
   offset?: number;
   suiteId?: string;
@@ -44,6 +45,7 @@ export function useTestRuns(
     setError(null);
     try {
       const params: Record<string, unknown> = {};
+      if (options.projectId) params.projectId = options.projectId;
       if (options.limit !== undefined) params.limit = options.limit;
       if (options.offset !== undefined) params.offset = options.offset;
       if (options.suiteId) params.suiteId = options.suiteId;
@@ -66,7 +68,7 @@ export function useTestRuns(
     } finally {
       setLoading(false);
     }
-  }, [api, options.limit, options.offset, options.suiteId, options.status, options.testCaseId]);
+  }, [api, options.projectId, options.limit, options.offset, options.suiteId, options.status, options.testCaseId]);
 
   useEffect(() => {
     fetchTestRuns();

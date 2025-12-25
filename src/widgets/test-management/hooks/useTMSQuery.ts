@@ -25,7 +25,8 @@ interface UseTMSQueryResult {
 }
 
 export function useTMSQuery(
-  api: ReturnType<typeof import('@/api').createApi<ApiRouter>>
+  api: ReturnType<typeof import('@/api').createApi<ApiRouter>>,
+  projectId?: string
 ): UseTMSQueryResult {
   const [results, setResults] = useState<QueryResult[]>([]);
   const [total, setTotal] = useState(0);
@@ -42,6 +43,7 @@ export function useTMSQuery(
       // The API client will be generated after backend build
       // For now, use type assertion
       const response = await (api.project as any).tms?.query?.POST({
+        projectId,
         query,
         entityType
       });
@@ -59,7 +61,7 @@ export function useTMSQuery(
     } finally {
       setLoading(false);
     }
-  }, [api]);
+  }, [api, projectId]);
 
   return {
     results,

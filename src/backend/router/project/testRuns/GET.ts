@@ -5,6 +5,7 @@ import { YouTrackTestRunRepository } from "@/backend/infrastructure/adapters/You
  * @zod-to-schema
  */
 export type GetTestRunReq = {
+    projectId?: string;
     id?: string;
     limit?: number;
     offset?: number;

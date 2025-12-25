@@ -10,14 +10,16 @@ import Button from '@jetbrains/ring-ui-built/components/button/button';
 
 interface TestRunsViewProps {
   api: ReturnType<typeof import('@/api').createApi<ApiRouter>>;
+  projectId?: string;
 }
 
-export const TestRunsView = memo<TestRunsViewProps>(({api}) => {
+export const TestRunsView = memo<TestRunsViewProps>(({api, projectId}) => {
   const [showRunDialog, setShowRunDialog] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [suiteFilter, setSuiteFilter] = useState<string>('');
   
   const {testRuns, total, loading, error, refetch} = useTestRuns(api, {
+    projectId,
     status: statusFilter || undefined,
     suiteId: suiteFilter || undefined,
     limit: 50

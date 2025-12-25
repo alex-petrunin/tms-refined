@@ -9,12 +9,13 @@ import Button from '@jetbrains/ring-ui-built/components/button/button';
 
 interface QueryViewProps {
   api: ReturnType<typeof import('@/api').createApi<ApiRouter>>;
+  projectId?: string;
 }
 
-export const QueryView = memo<QueryViewProps>(({api}) => {
+export const QueryView = memo<QueryViewProps>(({api, projectId}) => {
   const [query, setQuery] = useState('');
   const [entityType, setEntityType] = useState<'testCase' | 'testRun' | 'testSuite'>('testCase');
-  const {results, total, loading, error, executeQuery} = useTMSQuery(api);
+  const {results, total, loading, error, executeQuery} = useTMSQuery(api, projectId);
 
   const handleExecute = useCallback(() => {
     if (query.trim()) {

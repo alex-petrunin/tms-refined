@@ -14,6 +14,7 @@ interface TestCase {
 }
 
 interface UseTestCasesOptions {
+  projectId?: string;
   limit?: number;
   offset?: number;
   search?: string;
@@ -42,6 +43,7 @@ export function useTestCases(
     setError(null);
     try {
       const params: Record<string, unknown> = {};
+      if (options.projectId) params.projectId = options.projectId;
       if (options.limit !== undefined) params.limit = options.limit;
       if (options.offset !== undefined) params.offset = options.offset;
       if (options.search) params.search = options.search;
@@ -63,7 +65,7 @@ export function useTestCases(
     } finally {
       setLoading(false);
     }
-  }, [api, options.limit, options.offset, options.search, options.suiteId]);
+  }, [api, options.projectId, options.limit, options.offset, options.search, options.suiteId]);
 
   useEffect(() => {
     fetchTestCases();

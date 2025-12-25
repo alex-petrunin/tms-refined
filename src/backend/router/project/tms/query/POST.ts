@@ -4,6 +4,7 @@ import {Project, Issue} from "@/api/youtrack-types";
  * @zod-to-schema
  */
 export type TMSQueryReq = {
+    projectId?: string;
     query: string;
     entityType: 'testCase' | 'testRun' | 'testSuite';
     extensionPropertiesQuery?: Record<string, unknown>;
