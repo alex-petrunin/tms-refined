@@ -7,6 +7,22 @@ export const healthCheckResSchema = z.object({
   version: z.string(),
 });
 
+export const appSettingsResSchema = z.object({
+  settings: z.object({
+    testCaseProjects: z
+      .array(
+        z.record(z.unknown()).and(
+          z.object({
+            id: z.string(),
+            key: z.string(),
+            name: z.string().optional(),
+          }),
+        ),
+      )
+      .optional(),
+  }),
+});
+
 export const projectDemoReqSchema = z.object({
   projectId: z.string(),
   message: z.string().optional(),
@@ -204,6 +220,11 @@ export const schema = {
     demo: {
       GET: {
         Res: healthCheckResSchema
+      }
+    },
+    settings: {
+      GET: {
+        Res: appSettingsResSchema
       }
     },
     webhooks: {

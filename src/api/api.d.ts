@@ -1,6 +1,6 @@
 import { ExtractRPCFromHandler } from "../backend/types/utility";
 import * as globaldemoGETHandler from "../backend/router/global/demo/GET";
-import * as globalprojectsGETHandler from "../backend/router/global/projects/GET";
+import * as globalsettingsGETHandler from "../backend/router/global/settings/GET";
 import * as projectdemoGETHandler from "../backend/router/project/demo/GET";
 import * as projecttestCasesGETHandler from "../backend/router/project/testCases/GET";
 import * as projecttestCasesPOSTHandler from "../backend/router/project/testCases/POST";
@@ -18,8 +18,8 @@ export type ApiRouter = {
     demo: {
     GET: ExtractRPCFromHandler<globaldemoGETHandler.Handle>;
     };
-    projects: {
-    GET: ExtractRPCFromHandler<globalprojectsGETHandler.Handle>;
+    settings: {
+    GET: ExtractRPCFromHandler<globalsettingsGETHandler.Handle>;
     };
     webhooks: {
     gitlab: {

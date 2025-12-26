@@ -5,54 +5,49 @@
   "description": "Test Management System settings",
   "properties": {
     "testCaseProjects": {
-      "type": "array",
+      "type": "object",
       "title": "Test Case Projects",
       "description": "List of YouTrack projects where test cases can be stored as issues. If empty, test cases are created in the current project.",
-      "items": {
-        "type": "object",
-        "x-entity": "Project"
-      },
-      "x-scope": "GLOBAL"
+      "x-entity": "Project",
+      "x-scope": "global"
     },
     "testRunProjects": {
-      "type": "array",
+      "type": "object",
       "title": "Test Run Projects",
       "description": "List of YouTrack projects where test runs can be stored as issues. If empty, test runs are created in the current project.",
-      "items": {
-        "type": "object",
-        "x-entity": "Project"
-      },
-      "x-scope": "GLOBAL"
+
+      "x-entity": "Project",
+
+      "x-scope": "global"
     },
     "testSuiteProjects": {
-      "type": "array",
+      "type": "object",
       "title": "Test Suite Projects",
       "description": "List of projects that can contain test suites. Test suites are stored in project extension properties.",
-      "items": {
-        "type": "object",
-        "x-entity": "Project"
-      },
-      "x-scope": "GLOBAL"
+
+      "x-entity": "Project",
+
+      "x-scope": "global"
     },
     "testCaseIssueType": {
       "type": "string",
       "title": "Test Case Issue Type",
       "description": "Issue type name for test cases (e.g., 'Test Case'). Can be configured per project if different projects use different issue types.",
-      "x-scope": "PROJECT",
+      "x-scope": "project",
       "default": "Test Case"
     },
     "testRunIssueType": {
       "type": "string",
       "title": "Test Run Issue Type",
       "description": "Issue type name for test runs (e.g., 'Test Run'). Can be configured per project if different projects use different issue types.",
-      "x-scope": "PROJECT",
+      "x-scope": "project",
       "default": "Test Run"
     },
     "testSuiteCustomFieldName": {
       "type": "string",
       "title": "Test Suite Custom Field Name",
       "description": "Name of the custom field used to store test suites. Usually consistent across projects.",
-      "x-scope": "GLOBAL",
+      "x-scope": "global",
       "default": "Test Suite"
     }
   },
