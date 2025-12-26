@@ -1,11 +1,8 @@
-import {Project} from "@/api/youtrack-types";
-import { CreateTestSuiteUseCase } from "@/backend/application/usecases/CreateTestSuite";
-import { InMemoryTestSuiteRepository } from "@/backend/infrastructure/inMemory/InMemoryTestSuiteRepository";
-
 /**
  * @zod-to-schema
  */
 export type CreateTestSuiteReq = {
+    projectId: string;
     name: string;
     description?: string;
 };
@@ -21,7 +18,7 @@ export type CreateTestSuiteRes = {
 };
 
 export default function handle(ctx: CtxPost<CreateTestSuiteReq, CreateTestSuiteRes>): void {
-    const project = ctx.project as Project;
+    const project = ctx.project;
     const body = ctx.request.json();
 
     // Validate required fields
@@ -31,36 +28,56 @@ export default function handle(ctx: CtxPost<CreateTestSuiteReq, CreateTestSuiteR
         return;
     }
 
-    // Instantiate repository and use case
-    const repository = new InMemoryTestSuiteRepository();
-    const createTestSuiteUseCase = new CreateTestSuiteUseCase(repository);
+    // Generate unique ID for the test suite
+    const testSuiteId = `ts-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-    // Execute use case
-    createTestSuiteUseCase.execute({
+    // Load existing test suites from project extension properties
+    const extProps = (project as any).extensionProperties || {};
+    let suites: Array<{ id: string; name: string; description: string; testCaseIDs: string[] }> = [];
+    
+    if (extProps.testSuites && typeof extProps.testSuites === 'string') {
+        try {
+            suites = JSON.parse(extProps.testSuites);
+        } catch (e) {
+            suites = [];
+        }
+    }
+
+    // Create new test suite
+    const newSuite = {
+        id: testSuiteId,
         name: body.name,
-        description: body.description
-    }).then((testSuiteId) => {
-        // Retrieve the created test suite to return full details
-        return repository.findByID(testSuiteId).then((testSuite) => {
-            if (!testSuite) {
-                ctx.response.code = 500;
-                ctx.response.json({ error: 'Failed to retrieve created test suite' } as any);
-                return;
-            }
+        description: body.description || '',
+        testCaseIDs: []
+    };
 
-            const response: CreateTestSuiteRes = {
-                id: testSuite.id,
-                name: testSuite.name,
-                description: testSuite.description,
-                testCaseIDs: testSuite.testCaseIDs
-            };
+    // Add to collection
+    suites.push(newSuite);
 
-            ctx.response.json(response);
-        });
-    }).catch((error) => {
-        ctx.response.code = 500;
-        ctx.response.json({ error: error.message || 'Failed to create test suite' } as any);
-    });
+    // Save back to project extension properties using scripting API
+    try {
+        const entities = require('@jetbrains/youtrack-scripting-api/entities');
+        const projectEntity = entities.Project.findById(project.id);
+        if (projectEntity) {
+            projectEntity.extensionProperties.testSuites = JSON.stringify(suites);
+        } else {
+            // Fallback: set directly on context project's extensionProperties
+            (project as any).extensionProperties.testSuites = JSON.stringify(suites);
+        }
+    } catch (e) {
+        // Scripting API not available - set property directly on extensionProperties object
+        (project as any).extensionProperties.testSuites = JSON.stringify(suites);
+    }
+
+    // Return the created test suite
+    const response: CreateTestSuiteRes = {
+        id: newSuite.id,
+        name: newSuite.name,
+        description: newSuite.description,
+        testCaseIDs: newSuite.testCaseIDs
+    };
+
+    ctx.response.json(response);
 }
 
 export type Handle = typeof handle;

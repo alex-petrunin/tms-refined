@@ -34,8 +34,7 @@ export const TestSuiteForm = memo<TestSuiteFormProps>(({suiteId, onClose}) => {
     }
   }, [suiteId, api]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -47,6 +46,7 @@ export const TestSuiteForm = memo<TestSuiteFormProps>(({suiteId, onClose}) => {
         }, {id: suiteId} as any);
       } else {
         await api.project.testSuites.POST({
+          projectId:"DEM",
           name,
           description
         });
@@ -67,7 +67,7 @@ export const TestSuiteForm = memo<TestSuiteFormProps>(({suiteId, onClose}) => {
     <div className="test-suite-form">
       <h2>{suiteId ? 'Edit Test Suite' : 'Create Test Suite'}</h2>
       {error && <ErrorState error={error} />}
-      <form onSubmit={handleSubmit}>
+      <div onSubmit={handleSubmit}>
         <Input
           label="Name"
           value={name}
@@ -84,11 +84,11 @@ export const TestSuiteForm = memo<TestSuiteFormProps>(({suiteId, onClose}) => {
         />
         <div className="form-actions">
           <Button onClick={onClose}>Cancel</Button>
-          <Button primary type="submit" disabled={loading || !name}>
+          <Button primary type="button" onClick={handleSubmit} disabled={loading || !name}>
             {suiteId ? 'Update' : 'Create'}
           </Button>
         </div>
-      </form>
+      </div>
     </div>
   );
 });
