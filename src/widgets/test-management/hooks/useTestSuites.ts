@@ -1,5 +1,6 @@
-import {useState, useEffect, useCallback} from 'react';
-import {type ApiRouter} from '@/api/api';
+import { useQuery } from '@tanstack/react-query';
+import { useHost } from '@/widgets/common/hooks/use-host.tsx';
+import { createApi } from '@/api';
 
 interface TestSuite {
   id: string;
@@ -23,53 +24,63 @@ interface UseTestSuitesResult {
   refetch: () => void;
 }
 
-export function useTestSuites(
-  api: ReturnType<typeof import('@/api').createApi<ApiRouter>>,
-  options: UseTestSuitesOptions = {}
-): UseTestSuitesResult {
-  const [testSuites, setTestSuites] = useState<TestSuite[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+interface TestSuitesResponse {
+  items: TestSuite[];
+  total: number;
+}
 
-  const fetchTestSuites = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
+export function useTestSuites(
+    options: UseTestSuitesOptions = {}
+): UseTestSuitesResult {
+  const host = useHost();
+  const api = createApi(host);
+
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<TestSuitesResponse, Error>({
+    queryKey: [
+      'test-suites',
+      options.projectId,
+      options.limit,
+      options.offset,
+      options.search,
+    ],
+    enabled: Boolean(options.projectId),
+    queryFn: async () => {
       const params: Record<string, unknown> = {};
+
       if (options.projectId) params.projectId = options.projectId;
       if (options.limit !== undefined) params.limit = options.limit;
       if (options.offset !== undefined) params.offset = options.offset;
       if (options.search) params.search = options.search;
 
       const response = await api.project.testSuites.GET(params as any);
-      
-      // Handle both single item and list responses
-      if ('items' in response) {
-        setTestSuites(response.items);
-        setTotal(response.total);
-      } else {
-        // Single item response
-        setTestSuites([response]);
-        setTotal(1);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch test suites'));
-    } finally {
-      setLoading(false);
-    }
-  }, [api, options.projectId, options.limit, options.offset, options.search]);
 
-  useEffect(() => {
-    fetchTestSuites();
-  }, [fetchTestSuites]);
+      // Normalize response shape
+      if ('items' in response) {
+        return {
+          items: response.items,
+          total: response.total,
+        };
+      }
+
+      return {
+        items: [response],
+        total: 1,
+      };
+    },
+    keepPreviousData: true,
+    staleTime: 30_000,
+  });
 
   return {
-    testSuites,
-    total,
-    loading,
-    error,
-    refetch: fetchTestSuites
+    testSuites: data?.items ?? [],
+    total: data?.total ?? 0,
+    loading: isLoading,
+    error: error ?? null,
+    refetch,
   };
 }
-

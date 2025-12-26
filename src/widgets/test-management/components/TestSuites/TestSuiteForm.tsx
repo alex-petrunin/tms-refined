@@ -1,17 +1,20 @@
 import React, {memo, useState, useEffect, useCallback} from 'react';
-import {type ApiRouter} from '@/api/api';
 import Button from '@jetbrains/ring-ui-built/components/button/button';
 import {Input, Size} from '@jetbrains/ring-ui-built/components/input/input';
 import {LoadingState} from '../shared/LoadingState';
 import {ErrorState} from '../shared/ErrorState';
+import {useHost} from "@/widgets/common/hooks/use-host.tsx";
+import {createApi} from "@/api";
 
 interface TestSuiteFormProps {
-  api: ReturnType<typeof import('@/api').createApi<ApiRouter>>;
   suiteId?: string | null;
   onClose: () => void;
 }
 
-export const TestSuiteForm = memo<TestSuiteFormProps>(({api, suiteId, onClose}) => {
+export const TestSuiteForm = memo<TestSuiteFormProps>(({suiteId, onClose}) => {
+  const host = useHost();
+  const api = createApi(host);
+
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);

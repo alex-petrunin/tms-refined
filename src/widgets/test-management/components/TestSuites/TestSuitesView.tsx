@@ -1,4 +1,4 @@
-import React, {memo, useState, useCallback} from 'react';
+import {memo, useState, useCallback} from 'react';
 import {type ApiRouter} from '@/api/api';
 import {useTestSuites} from '../../hooks/useTestSuites';
 import {LoadingState} from '../shared/LoadingState';
@@ -13,12 +13,12 @@ interface TestSuitesViewProps {
   projectId?: string;
 }
 
-export const TestSuitesView = memo<TestSuitesViewProps>(({api, projectId}) => {
+export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
   const [showForm, setShowForm] = useState(false);
   const [editingSuite, setEditingSuite] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   
-  const {testSuites, total, loading, error, refetch} = useTestSuites(api, {
+  const {testSuites, total, loading, error, refetch} = useTestSuites({
     projectId,
     search,
     limit: 50
@@ -51,7 +51,6 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({api, projectId}) => {
   if (showForm) {
     return (
       <TestSuiteForm
-        api={api}
         suiteId={editingSuite}
         onClose={handleFormClose}
       />
@@ -88,7 +87,6 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({api, projectId}) => {
         <TestSuiteList
           suites={testSuites}
           onEdit={handleEdit}
-          api={api}
         />
       )}
     </div>

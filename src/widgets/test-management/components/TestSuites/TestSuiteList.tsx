@@ -1,8 +1,7 @@
-import React, {memo, useMemo} from 'react';
+import {memo, useMemo} from 'react';
 import SimpleTable from '@jetbrains/ring-ui-built/components/table/simple-table';
 import type {Column} from '@jetbrains/ring-ui-built/components/table/header-cell';
 import Button from '@jetbrains/ring-ui-built/components/button/button';
-import {type ApiRouter} from '@/api/api';
 
 interface TestSuite {
   id: string;
@@ -14,7 +13,6 @@ interface TestSuite {
 interface TestSuiteListProps {
   suites: TestSuite[];
   onEdit: (suiteId: string) => void;
-  api: ReturnType<typeof import('@/api').createApi<ApiRouter>>;
 }
 
 export const TestSuiteList = memo<TestSuiteListProps>(({suites, onEdit}) => {

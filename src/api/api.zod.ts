@@ -125,7 +125,7 @@ export const createTestRunResSchema = z.object({
 });
 
 export const getTestSuiteReqSchema = z.object({
-  projectId: z.string().optional(),
+  projectId: z.string(),
   id: z.string().optional(),
   limit: z.number().optional(),
   offset: z.number().optional(),
