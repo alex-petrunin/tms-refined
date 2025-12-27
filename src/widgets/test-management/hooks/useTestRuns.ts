@@ -6,6 +6,7 @@ interface TestRun {
   id: string;
   testCaseIDs: string[];
   testSuiteID: string;
+  testSuiteName: string;
   status: string;
   executionTarget: {
     id: string;

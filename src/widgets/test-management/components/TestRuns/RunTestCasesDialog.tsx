@@ -18,6 +18,16 @@ interface TestCaseOption {
   label: string;
 }
 
+interface ExecutionTargetOption {
+  key: string;
+  label: string;
+  type: string;
+  config?: {
+    projectUrl?: string;
+    pipelineRef?: string;
+  };
+}
+
 interface RunTestCasesDialogProps {
   projectId: string;
   onClose: () => void;
@@ -28,21 +38,25 @@ export const RunTestCasesDialog = memo<RunTestCasesDialogProps>(({projectId, onC
   
   const [suiteOptions, setSuiteOptions] = useState<SuiteOption[]>([]);
   const [testCaseOptions, setTestCaseOptions] = useState<TestCaseOption[]>([]);
+  const [executionTargetOptions, setExecutionTargetOptions] = useState<ExecutionTargetOption[]>([]);
   const [selectedSuite, setSelectedSuite] = useState<SuiteOption | null>(null);
   const [selectedTestCases, setSelectedTestCases] = useState<TestCaseOption[]>([]);
+  const [selectedExecutionTarget, setSelectedExecutionTarget] = useState<ExecutionTargetOption | null>(null);
   const [executionMode, setExecutionMode] = useState<'MANAGED' | 'OBSERVED'>('MANAGED');
   const [loading, setLoading] = useState(false);
   const [loadingSuites, setLoadingSuites] = useState(true);
   const [loadingTestCases, setLoadingTestCases] = useState(false);
+  const [loadingIntegrations, setLoadingIntegrations] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // Load test suites
+  // Load test suites and integrations
   useEffect(() => {
     if (!host || !projectId) return;
     
     const api = createApi(host);
-    setLoadingSuites(true);
     
+    // Load test suites
+    setLoadingSuites(true);
     api.project.testSuites.GET({projectId, limit: 100})
       .then((response: any) => {
         const options: SuiteOption[] = (response.items || []).map((suite: any) => ({
@@ -55,6 +69,45 @@ export const RunTestCasesDialog = memo<RunTestCasesDialogProps>(({projectId, onC
         console.error('Failed to load test suites:', err);
       })
       .finally(() => setLoadingSuites(false));
+
+    // Load enabled integrations for execution targets
+    setLoadingIntegrations(true);
+    api.project.integrations.GET({projectId, enabled: true} as any)
+      .then((response: any) => {
+        const options: ExecutionTargetOption[] = (response.items || []).map((integration: any) => ({
+          key: integration.id,
+          label: `${integration.name} (${integration.type})`,
+          type: integration.type,
+          config: integration.config
+        }));
+        
+        // Add manual option as default if no integrations exist
+        if (options.length === 0) {
+          options.push({
+            key: 'manual',
+            label: 'Manual Execution',
+            type: 'MANUAL'
+          });
+        }
+        
+        setExecutionTargetOptions(options);
+        // Auto-select first option (usually Manual)
+        if (options.length > 0) {
+          setSelectedExecutionTarget(options[0]);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load integrations:', err);
+        // Fallback to manual
+        const manualOption: ExecutionTargetOption = {
+          key: 'manual',
+          label: 'Manual Execution',
+          type: 'MANUAL'
+        };
+        setExecutionTargetOptions([manualOption]);
+        setSelectedExecutionTarget(manualOption);
+      })
+      .finally(() => setLoadingIntegrations(false));
   }, [host, projectId]);
 
   // Load test cases when suite is selected
@@ -81,6 +134,18 @@ export const RunTestCasesDialog = memo<RunTestCasesDialogProps>(({projectId, onC
       .finally(() => setLoadingTestCases(false));
   }, [host, projectId, selectedSuite]);
 
+  // Auto-set execution mode based on target type
+  useEffect(() => {
+    if (selectedExecutionTarget) {
+      if (selectedExecutionTarget.type === 'MANUAL') {
+        setExecutionMode('MANAGED');
+      } else {
+        // CI integrations typically use OBSERVED mode (awaiting external results)
+        setExecutionMode('OBSERVED');
+      }
+    }
+  }, [selectedExecutionTarget]);
+
   const handleSuiteChange = useCallback((option: SuiteOption | null) => {
     setSelectedSuite(option);
     setSelectedTestCases([]); // Reset test case selection when suite changes
@@ -100,8 +165,12 @@ export const RunTestCasesDialog = memo<RunTestCasesDialogProps>(({projectId, onC
     setSelectedTestCases(testCaseOptions);
   }, [testCaseOptions]);
 
+  const handleExecutionTargetChange = useCallback((option: ExecutionTargetOption | null) => {
+    setSelectedExecutionTarget(option);
+  }, []);
+
   const handleSubmit = useCallback(async () => {
-    if (!host || !selectedSuite || selectedTestCases.length === 0) return;
+    if (!host || !selectedSuite || selectedTestCases.length === 0 || !selectedExecutionTarget) return;
     
     setLoading(true);
     setError(null);
@@ -114,7 +183,13 @@ export const RunTestCasesDialog = memo<RunTestCasesDialogProps>(({projectId, onC
         projectId,
         suiteID: selectedSuite.key,
         testCaseIDs: testCaseIDs,
-        executionMode
+        executionMode,
+        executionTarget: {
+          id: selectedExecutionTarget.key,
+          name: selectedExecutionTarget.label.replace(` (${selectedExecutionTarget.type})`, ''),
+          type: selectedExecutionTarget.type,
+          ref: selectedExecutionTarget.config?.pipelineRef || ''
+        }
       } as any);
       onClose();
     } catch (err) {
@@ -122,7 +197,7 @@ export const RunTestCasesDialog = memo<RunTestCasesDialogProps>(({projectId, onC
     } finally {
       setLoading(false);
     }
-  }, [host, selectedSuite, selectedTestCases, executionMode, onClose]);
+  }, [host, selectedSuite, selectedTestCases, executionMode, selectedExecutionTarget, projectId, onClose]);
 
   return (
     <Dialog
@@ -174,27 +249,56 @@ export const RunTestCasesDialog = memo<RunTestCasesDialogProps>(({projectId, onC
             </div>
           )}
         </div>
+
+        <div className="form-field">
+          <label className="form-label">Execution Target *</label>
+          <Select
+            data={executionTargetOptions}
+            selected={selectedExecutionTarget}
+            onChange={handleExecutionTargetChange}
+            filter
+            loading={loadingIntegrations}
+            placeholder="Select execution target..."
+            label="Execution Target"
+          />
+          {selectedExecutionTarget && selectedExecutionTarget.type !== 'MANUAL' && (
+            <div style={{marginTop: 4, fontSize: 12, color: '#666'}}>
+              Tests will be triggered via {selectedExecutionTarget.type}
+              {selectedExecutionTarget.config?.pipelineRef && (
+                <> (ref: <code>{selectedExecutionTarget.config.pipelineRef}</code>)</>
+              )}
+            </div>
+          )}
+        </div>
         
         <div className="form-field">
           <label className="form-label">Execution Mode</label>
-          <div style={{display: 'flex', gap: 16}}>
-            <label style={{display: 'flex', alignItems: 'center', gap: 4}}>
+          <div style={{display: 'flex', flexDirection: 'column', gap: 8}}>
+            <label style={{display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer'}}>
               <input
                 type="radio"
                 value="MANAGED"
                 checked={executionMode === 'MANAGED'}
                 onChange={() => setExecutionMode('MANAGED')}
+                style={{marginTop: 3}}
               />
-              Managed (track results internally)
+              <div>
+                <div style={{fontWeight: 500}}>Managed</div>
+                <div style={{fontSize: 12, color: '#666'}}>Track test results directly in YouTrack</div>
+              </div>
             </label>
-            <label style={{display: 'flex', alignItems: 'center', gap: 4}}>
+            <label style={{display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer'}}>
               <input
                 type="radio"
                 value="OBSERVED"
                 checked={executionMode === 'OBSERVED'}
                 onChange={() => setExecutionMode('OBSERVED')}
+                style={{marginTop: 3}}
               />
-              Observed (await external results)
+              <div>
+                <div style={{fontWeight: 500}}>Observed</div>
+                <div style={{fontSize: 12, color: '#666'}}>Await results from external CI system</div>
+              </div>
             </label>
           </div>
         </div>
@@ -204,7 +308,7 @@ export const RunTestCasesDialog = memo<RunTestCasesDialogProps>(({projectId, onC
         <Button 
           primary 
           onClick={handleSubmit} 
-          disabled={loading || !selectedSuite || selectedTestCases.length === 0}
+          disabled={loading || !selectedSuite || selectedTestCases.length === 0 || !selectedExecutionTarget}
         >
           {loading ? 'Running...' : `Run ${selectedTestCases.length} Test(s)`}
         </Button>

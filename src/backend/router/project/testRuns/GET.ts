@@ -18,6 +18,7 @@ export type GetTestRunItem = {
     id: string;
     testCaseIDs: string[];
     testSuiteID: string;
+    testSuiteName: string;
     status: string;
     executionTarget: {
         id: string;
@@ -67,6 +68,20 @@ export default function handle(ctx: CtxGet<ListTestRunsRes, GetTestRunReq>): voi
             ctx.response.code = 404;
             ctx.response.json({ error: 'Project not found' } as any);
             return;
+        }
+
+        // Load suites to resolve names
+        let suiteMap: Record<string, string> = {};
+        try {
+            const suitesJson = ytProject.extensionProperties.testSuites;
+            if (suitesJson && typeof suitesJson === 'string') {
+                const suites = JSON.parse(suitesJson);
+                suiteMap = Object.fromEntries(
+                    suites.map((s: any) => [s.id, s.name])
+                );
+            }
+        } catch (e) {
+            console.warn('[GET testRuns] Failed to load suites for name resolution:', e);
         }
 
         // Search for all issues in the project
@@ -125,10 +140,14 @@ export default function handle(ctx: CtxGet<ListTestRunsRes, GetTestRunReq>): voi
                 continue;
             }
 
+            // Resolve suite name
+            const suiteName = suiteMap[suiteId] || suiteId;
+
             testRuns.push({
                 id: testRunId,
                 testCaseIDs: testCaseIDs,
                 testSuiteID: suiteId,
+                testSuiteName: suiteName,
                 status: status,
                 executionTarget: {
                     id: extProps.executionTargetId || '',

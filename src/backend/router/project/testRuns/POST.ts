@@ -9,7 +9,7 @@ export type CreateTestRunReq = {
     executionTarget?: {
         id?: string;
         name?: string;
-        type?: "GITLAB" | "GITHUB" | "MANUAL";
+        type?: "GITLAB" | "GITHUB" | "JENKINS" | "MANUAL";
         ref?: string;
     };
 };

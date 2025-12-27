@@ -67,6 +67,10 @@
         "testSuites": {
           "type": "string",
           "description": "JSON string containing test suites data"
+        },
+        "integrations": {
+          "type": "string",
+          "description": "JSON string containing CI integration configurations"
         }
       }
     },

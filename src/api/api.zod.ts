@@ -37,6 +37,132 @@ export const projectDemoResSchema = z.object({
   }),
 });
 
+export const deleteIntegrationReqSchema = z.object({
+  projectId: z.string(),
+  id: z.string(),
+});
+
+export const deleteIntegrationResSchema = z.object({
+  success: z.boolean(),
+  deletedId: z.string(),
+});
+
+export const getIntegrationsReqSchema = z.object({
+  projectId: z.string().optional(),
+  id: z.string().optional(),
+  type: z
+    .union([
+      z.literal("GITLAB"),
+      z.literal("GITHUB"),
+      z.literal("JENKINS"),
+      z.literal("MANUAL"),
+    ])
+    .optional(),
+  enabled: z.boolean().optional(),
+});
+
+export const integrationConfigSchema = z.object({
+  projectUrl: z.string().optional(),
+  pipelineRef: z.string().optional(),
+  token: z.string().optional(),
+  webhookSecret: z.string().optional(),
+});
+
+export const integrationItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.union([
+    z.literal("GITLAB"),
+    z.literal("GITHUB"),
+    z.literal("JENKINS"),
+    z.literal("MANUAL"),
+  ]),
+  enabled: z.boolean(),
+  config: integrationConfigSchema,
+});
+
+export const listIntegrationsResSchema = z.object({
+  items: z.array(integrationItemSchema),
+  total: z.number(),
+});
+
+export const createIntegrationReqSchema = z.object({
+  projectId: z.string(),
+  name: z.string(),
+  type: z.union([
+    z.literal("GITLAB"),
+    z.literal("GITHUB"),
+    z.literal("JENKINS"),
+    z.literal("MANUAL"),
+  ]),
+  enabled: z.boolean(),
+  config: z.object({
+    projectUrl: z.string().optional(),
+    pipelineRef: z.string().optional(),
+    token: z.string().optional(),
+    webhookSecret: z.string().optional(),
+  }),
+});
+
+export const createIntegrationResSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.union([
+    z.literal("GITLAB"),
+    z.literal("GITHUB"),
+    z.literal("JENKINS"),
+    z.literal("MANUAL"),
+  ]),
+  enabled: z.boolean(),
+  config: z.object({
+    projectUrl: z.string().optional(),
+    pipelineRef: z.string().optional(),
+    token: z.string().optional(),
+    webhookSecret: z.string().optional(),
+  }),
+});
+
+export const updateIntegrationReqSchema = z.object({
+  projectId: z.string(),
+  id: z.string(),
+  name: z.string().optional(),
+  type: z
+    .union([
+      z.literal("GITLAB"),
+      z.literal("GITHUB"),
+      z.literal("JENKINS"),
+      z.literal("MANUAL"),
+    ])
+    .optional(),
+  enabled: z.boolean().optional(),
+  config: z
+    .object({
+      projectUrl: z.string().optional(),
+      pipelineRef: z.string().optional(),
+      token: z.string().optional(),
+      webhookSecret: z.string().optional(),
+    })
+    .optional(),
+});
+
+export const updateIntegrationResSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.union([
+    z.literal("GITLAB"),
+    z.literal("GITHUB"),
+    z.literal("JENKINS"),
+    z.literal("MANUAL"),
+  ]),
+  enabled: z.boolean(),
+  config: z.object({
+    projectUrl: z.string().optional(),
+    pipelineRef: z.string().optional(),
+    token: z.string().optional(),
+    webhookSecret: z.string().optional(),
+  }),
+});
+
 export const getTestCaseReqSchema = z.object({
   projectId: z.string().optional(),
   id: z.string().optional(),
@@ -89,67 +215,6 @@ export const updateTestCaseResSchema = z.object({
   summary: z.string(),
   description: z.string(),
   suiteId: z.string().optional(),
-});
-
-export const getTestRunReqSchema = z.object({
-  projectId: z.string().optional(),
-  id: z.string().optional(),
-  limit: z.number().optional(),
-  offset: z.number().optional(),
-  suiteId: z.string().optional(),
-  status: z.string().optional(),
-  testCaseId: z.string().optional(),
-});
-
-export const getTestRunItemSchema = z.object({
-  id: z.string(),
-  testCaseIDs: z.array(z.string()),
-  testSuiteID: z.string(),
-  status: z.string(),
-  executionTarget: z.object({
-    id: z.string(),
-    name: z.string(),
-    type: z.string(),
-    ref: z.string(),
-  }),
-});
-
-export const listTestRunsResSchema = z.object({
-  items: z.array(getTestRunItemSchema),
-  total: z.number(),
-});
-
-export const createTestRunReqSchema = z.object({
-  projectId: z.string(),
-  suiteID: z.string(),
-  testCaseIDs: z.array(z.string()),
-  executionMode: z
-    .union([z.literal("MANAGED"), z.literal("OBSERVED")])
-    .optional(),
-  executionTarget: z
-    .object({
-      id: z.string().optional(),
-      name: z.string().optional(),
-      type: z
-        .union([z.literal("GITLAB"), z.literal("GITHUB"), z.literal("MANUAL")])
-        .optional(),
-      ref: z.string().optional(),
-    })
-    .optional(),
-});
-
-export const createTestRunResSchema = z.object({
-  id: z.string(),
-  issueId: z.string(),
-  testCaseIDs: z.array(z.string()),
-  testSuiteID: z.string(),
-  status: z.string(),
-  executionTarget: z.object({
-    id: z.string(),
-    name: z.string(),
-    type: z.string(),
-    ref: z.string(),
-  }),
 });
 
 export const deleteTestSuiteReqSchema = z.object({
@@ -208,6 +273,73 @@ export const updateTestSuiteResSchema = z.object({
   name: z.string(),
   description: z.string(),
   testCaseIDs: z.array(z.string()),
+});
+
+export const getTestRunReqSchema = z.object({
+  projectId: z.string().optional(),
+  id: z.string().optional(),
+  limit: z.number().optional(),
+  offset: z.number().optional(),
+  suiteId: z.string().optional(),
+  status: z.string().optional(),
+  testCaseId: z.string().optional(),
+});
+
+export const getTestRunItemSchema = z.object({
+  id: z.string(),
+  testCaseIDs: z.array(z.string()),
+  testSuiteID: z.string(),
+  testSuiteName: z.string(),
+  status: z.string(),
+  executionTarget: z.object({
+    id: z.string(),
+    name: z.string(),
+    type: z.string(),
+    ref: z.string(),
+  }),
+});
+
+export const listTestRunsResSchema = z.object({
+  items: z.array(getTestRunItemSchema),
+  total: z.number(),
+});
+
+export const createTestRunReqSchema = z.object({
+  projectId: z.string(),
+  suiteID: z.string(),
+  testCaseIDs: z.array(z.string()),
+  executionMode: z
+    .union([z.literal("MANAGED"), z.literal("OBSERVED")])
+    .optional(),
+  executionTarget: z
+    .object({
+      id: z.string().optional(),
+      name: z.string().optional(),
+      type: z
+        .union([
+          z.literal("GITLAB"),
+          z.literal("GITHUB"),
+          z.literal("JENKINS"),
+          z.literal("MANUAL"),
+        ])
+        .optional(),
+      ref: z.string().optional(),
+    })
+    .optional(),
+});
+
+export const createTestRunResSchema = z.object({
+  id: z.string(),
+  issueId: z.string(),
+  testCaseIDs: z.array(z.string()),
+  testSuiteID: z.string(),
+  status: z.string(),
+  executionTarget: z.object({
+    id: z.string(),
+    name: z.string(),
+    type: z.string(),
+    ref: z.string(),
+  }),
 });
 
 export const gitLabWebhookReqSchema = z.object({});
@@ -284,6 +416,24 @@ export const schema = {
         Res: projectDemoResSchema
       }
     },
+    integrations: {
+      DELETE: {
+        Req: deleteIntegrationReqSchema,
+        Res: deleteIntegrationResSchema
+      },
+      GET: {
+        Req: getIntegrationsReqSchema,
+        Res: listIntegrationsResSchema
+      },
+      POST: {
+        Req: createIntegrationReqSchema,
+        Res: createIntegrationResSchema
+      },
+      PUT: {
+        Req: updateIntegrationReqSchema,
+        Res: updateIntegrationResSchema
+      }
+    },
     testCases: {
       GET: {
         Req: getTestCaseReqSchema,
@@ -296,22 +446,6 @@ export const schema = {
       PUT: {
         Req: updateTestCaseReqSchema,
         Res: updateTestCaseResSchema
-      }
-    },
-    testRuns: {
-      GET: {
-        Req: getTestRunReqSchema,
-        Res: listTestRunsResSchema
-      },
-      POST: {
-        Req: createTestRunReqSchema,
-        Res: createTestRunResSchema
-      },
-      results: {
-        POST: {
-          Req: testRunResultReqSchema,
-          Res: testRunResultResSchema
-        }
       }
     },
     testSuites: {
@@ -330,6 +464,22 @@ export const schema = {
       PUT: {
         Req: updateTestSuiteReqSchema,
         Res: updateTestSuiteResSchema
+      }
+    },
+    testRuns: {
+      GET: {
+        Req: getTestRunReqSchema,
+        Res: listTestRunsResSchema
+      },
+      POST: {
+        Req: createTestRunReqSchema,
+        Res: createTestRunResSchema
+      },
+      results: {
+        POST: {
+          Req: testRunResultReqSchema,
+          Res: testRunResultResSchema
+        }
       }
     },
     tms: {

@@ -28,6 +28,7 @@ export interface ExtendedIssue extends Issue {
 export interface ExtendedProject extends Project {
   extensionProperties: {
   readonly testSuites?: string;
+  readonly integrations?: string;
 };
 }
 

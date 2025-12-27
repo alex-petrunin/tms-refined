@@ -244,13 +244,33 @@
   border-radius: 8px;
   padding: calc(var(--ring-unit) * 2);
   background: white;
+  transition: box-shadow 0.2s ease;
+}
+
+.integration-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.integration-card.disabled {
+  opacity: 0.7;
+  background: #fafafa;
 }
 
 .integration-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: calc(var(--ring-unit));
+}
+
+.integration-title {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--ring-unit));
+}
+
+.integration-icon {
+  font-size: 20px;
 }
 
 .integration-header h3 {
@@ -258,8 +278,59 @@
   font-size: 16px;
 }
 
+.integration-description {
+  margin: calc(var(--ring-unit)) 0;
+  color: var(--ring-secondary-color, #666);
+  font-size: 13px;
+}
+
+.integration-config {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--ring-unit) * 0.5);
+  font-size: 12px;
+  margin-bottom: calc(var(--ring-unit) * 0.5);
+}
+
+.integration-config .config-label {
+  color: var(--ring-secondary-color, #666);
+}
+
+.integration-config a {
+  color: var(--ring-main-color, #0065ff);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.integration-config a:hover {
+  text-decoration: underline;
+}
+
+.integration-config code {
+  background: #f5f5f5;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
 .integration-actions {
-  margin-top: calc(var(--ring-unit));
+  margin-top: calc(var(--ring-unit) * 1.5);
+  display: flex;
+  gap: calc(var(--ring-unit));
+  flex-wrap: wrap;
+}
+
+/* Integration form */
+.integration-form .form-field {
+  margin-bottom: calc(var(--ring-unit) * 2);
+}
+
+.integration-form .form-field label {
+  display: block;
+  margin-bottom: calc(var(--ring-unit) * 0.5);
+  font-size: 13px;
+  color: var(--ring-secondary-color, #666);
 }
 
 /* Action buttons */

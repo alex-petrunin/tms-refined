@@ -6,6 +6,7 @@ interface TestRun {
   id: string;
   testCaseIDs: string[];
   testSuiteID: string;
+  testSuiteName: string;
   status: string;
   executionTarget: {
     id: string;
@@ -39,15 +40,15 @@ export const TestRunList = memo<TestRunListProps>(({testRuns}) => {
 
   const data = useMemo(() => testRuns.map(testRun => ({
     id: testRun.id,
-    testSuiteID: testRun.testSuiteID,
+    testSuiteName: testRun.testSuiteName || testRun.testSuiteID,
     testCaseCount: testRun.testCaseIDs.length,
     status: testRun.status,
     executionTarget: `${testRun.executionTarget.type}: ${testRun.executionTarget.name}`
   })), [testRuns]);
 
   const columns: Column<typeof data[0]>[] = useMemo(() => [
-    {id: 'id', title: 'ID'},
-    {id: 'testSuiteID', title: 'Test Suite'},
+    {id: 'id', title: 'Run ID'},
+    {id: 'testSuiteName', title: 'Test Suite'},
     {id: 'testCaseCount', title: 'Test Cases'},
     {
       id: 'status',
