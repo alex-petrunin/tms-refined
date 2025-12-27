@@ -2,6 +2,7 @@
  * @zod-to-schema
  */
 export type UpdateTestSuiteReq = {
+    projectId: string;
     id: string;
     name?: string;
     description?: string;

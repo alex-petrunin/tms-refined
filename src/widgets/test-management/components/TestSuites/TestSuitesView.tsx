@@ -50,6 +50,7 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
     return (
       <TestSuiteForm
         suiteId={editingSuite}
+        projectId={projectId || ''}
         onClose={handleFormClose}
       />
     );

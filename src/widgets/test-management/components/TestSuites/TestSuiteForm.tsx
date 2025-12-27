@@ -1,4 +1,4 @@
-import React, {memo, useState, useEffect, useCallback} from 'react';
+import React, {memo, useState, useEffect, useCallback, useMemo, useRef} from 'react';
 import Button from '@jetbrains/ring-ui-built/components/button/button';
 import {Input, Size} from '@jetbrains/ring-ui-built/components/input/input';
 import {LoadingState} from '../shared/LoadingState';
@@ -8,45 +8,59 @@ import {createApi} from "@/api";
 
 interface TestSuiteFormProps {
   suiteId?: string | null;
+  projectId: string;
   onClose: () => void;
 }
 
-export const TestSuiteForm = memo<TestSuiteFormProps>(({suiteId, onClose}) => {
+export const TestSuiteForm = memo<TestSuiteFormProps>(({suiteId, projectId, onClose}) => {
   const host = useHost();
-  const api = createApi(host);
+  // Memoize API to prevent infinite loops
+  const api = useMemo(() => createApi(host), [host]);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  
+  // Track if we've already loaded to prevent duplicate requests
+  const loadedRef = useRef(false);
 
   useEffect(() => {
-    if (suiteId) {
+    if (suiteId && projectId && !loadedRef.current) {
+      loadedRef.current = true;
       // Load existing suite
       setLoading(true);
-      api.project.testSuites.GET({id: suiteId} as any)
-        .then((suite: any) => {
-          setName(suite.name || '');
-          setDescription(suite.description || '');
+      api.project.testSuites.GET({projectId, id: suiteId})
+        .then((response: any) => {
+          // Response is { items: [...], total: number }
+          const suite = response.items?.[0];
+          if (suite) {
+            setName(suite.name || '');
+            setDescription(suite.description || '');
+          }
         })
         .catch((err) => setError(err instanceof Error ? err : new Error('Failed to load suite')))
         .finally(() => setLoading(false));
     }
-  }, [suiteId, api]);
+  }, [suiteId, projectId, api]);
 
   const handleSubmit = useCallback(async () => {
+    if (!projectId) return;
+    
     setLoading(true);
     setError(null);
 
     try {
       if (suiteId) {
         await api.project.testSuites.PUT({
+          projectId,
+          id: suiteId,
           name,
           description
-        }, {id: suiteId} as any);
+        });
       } else {
         await api.project.testSuites.POST({
-          projectId:"DEM",
+          projectId,
           name,
           description
         });
@@ -57,7 +71,7 @@ export const TestSuiteForm = memo<TestSuiteFormProps>(({suiteId, onClose}) => {
     } finally {
       setLoading(false);
     }
-  }, [api, suiteId, name, description, onClose]);
+  }, [api, projectId, suiteId, name, description, onClose]);
 
   if (loading && suiteId) {
     return <LoadingState message="Loading test suite..." />;

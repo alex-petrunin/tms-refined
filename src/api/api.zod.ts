@@ -158,6 +158,7 @@ export const createTestSuiteResSchema = z.object({
 });
 
 export const updateTestSuiteReqSchema = z.object({
+  projectId: z.string(),
   id: z.string(),
   name: z.string().optional(),
   description: z.string().optional(),
