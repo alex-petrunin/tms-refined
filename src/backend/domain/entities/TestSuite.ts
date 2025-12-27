@@ -7,6 +7,7 @@ export class TestSuite {
         public name: string,
         public description: string,
         public testCaseIDs: TestCaseID[],
+        public issueId?: string,  // YouTrack issue ID when stored as Issue
     ){}
 
     addTestCase(testCaseId: TestCaseID) {

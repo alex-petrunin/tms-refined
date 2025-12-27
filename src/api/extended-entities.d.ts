@@ -16,6 +16,7 @@ export interface ExtendedIssue extends Issue {
   readonly testRunStatus?: string;
   readonly testSuiteId?: string;
   readonly testCaseIds?: string;
+  readonly testCaseIDs?: string;
   readonly idempotencyKey?: string;
 };
 }

@@ -6,15 +6,20 @@ import {EmptyState} from '../shared/EmptyState';
 import {TestSuiteList} from './TestSuiteList';
 import {TestSuiteForm} from './TestSuiteForm';
 import Button from '@jetbrains/ring-ui-built/components/button/button';
+import {useHost} from '@/widgets/common/hooks/use-host';
+import {createApi} from '@/api';
 
 interface TestSuitesViewProps {
   projectId?: string;
 }
 
 export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
+  const host = useHost();
   const [showForm, setShowForm] = useState(false);
   const [editingSuite, setEditingSuite] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   
   const {testSuites, total, loading, error, refetch} = useTestSuites({
     projectId,
@@ -31,6 +36,32 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
     setEditingSuite(suiteId);
     setShowForm(true);
   }, []);
+
+  const handleDelete = useCallback(async (suiteId: string, _suiteName: string) => {
+    if (!host || !projectId) return;
+    
+    setDeleting(true);
+    setDeleteError(null);
+    
+    try {
+      const api = createApi(host);
+      // Cast to any to avoid type inference issues with DELETE method
+      const result = await (api.project.testSuites.DELETE as any)({
+        projectId,
+        id: suiteId
+      }) as {success: boolean; message?: string};
+      
+      if (result.success) {
+        refetch();
+      } else {
+        setDeleteError(result.message || 'Failed to delete test suite');
+      }
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete test suite');
+    } finally {
+      setDeleting(false);
+    }
+  }, [host, projectId, refetch]);
 
   const handleFormClose = useCallback(() => {
     setShowForm(false);
@@ -76,6 +107,14 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
           </Button>
         </div>
       </div>
+      
+      {deleteError && (
+        <div className="error-message">
+          {deleteError}
+          <Button text onClick={() => setDeleteError(null)}>Dismiss</Button>
+        </div>
+      )}
+      
       {testSuites.length === 0 ? (
         <EmptyState
           message="No test suites found"
@@ -86,6 +125,8 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
         <TestSuiteList
           suites={testSuites}
           onEdit={handleEdit}
+          onDelete={handleDelete}
+          deleting={deleting}
         />
       )}
     </div>
@@ -93,4 +134,3 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
 });
 
 TestSuitesView.displayName = 'TestSuitesView';
-

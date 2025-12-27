@@ -21,11 +21,12 @@ export const requirements = {
     AwaitingExternalResults: { name: 'Awaiting External Results' }
   },
   
-  // Link to test suite
+  // Link to test suite - values are created dynamically when test suites are created
+  // via the POST /project/testSuites handler using createValue()
   TestSuite: {
     type: entities.EnumField.fieldType,
     name: 'Test Suite',
-    // Values will be populated dynamically from project.testSuites
+    // Values will be populated dynamically when test suites are created
   },
   
   // Execution target type

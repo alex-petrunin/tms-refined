@@ -124,6 +124,16 @@ export const createTestRunResSchema = z.object({
   testRunIDs: z.array(z.string()),
 });
 
+export const deleteTestSuiteReqSchema = z.object({
+  projectId: z.string(),
+  id: z.string(),
+});
+
+export const deleteTestSuiteResSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+});
+
 export const getTestSuiteReqSchema = z.object({
   projectId: z.string(),
   id: z.string().optional(),
@@ -179,16 +189,6 @@ export const gitLabWebhookResSchema = z.object({
   message: z.string().optional(),
 });
 
-export const testRunResultReqSchema = z.object({
-  testRunID: z.string(),
-  passed: z.boolean(),
-});
-
-export const testRunResultResSchema = z.object({
-  success: z.boolean(),
-  message: z.string().optional(),
-});
-
 export const tMSQueryReqSchema = z.object({
   projectId: z.string().optional(),
   query: z.string(),
@@ -215,6 +215,16 @@ export const tMSQueryResSchema = z.object({
         .optional(),
     }),
   ),
+});
+
+export const testRunResultReqSchema = z.object({
+  testRunID: z.string(),
+  passed: z.boolean(),
+});
+
+export const testRunResultResSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
 });
 
 // Nested schema object for validation system
@@ -273,6 +283,10 @@ export const schema = {
       }
     },
     testSuites: {
+      DELETE: {
+        Req: deleteTestSuiteReqSchema,
+        Res: deleteTestSuiteResSchema
+      },
       GET: {
         Req: getTestSuiteReqSchema,
         Res: getTestSuiteResSchema

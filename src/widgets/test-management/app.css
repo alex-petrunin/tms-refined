@@ -251,6 +251,25 @@
   margin-top: calc(var(--ring-unit));
 }
 
+/* Action buttons */
+.action-buttons {
+  display: flex;
+  gap: calc(var(--ring-unit));
+}
+
+/* Error message banner */
+.error-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(var(--ring-unit)) calc(var(--ring-unit) * 2);
+  background: var(--ring-error-background-color, #fff5f5);
+  border: 1px solid var(--ring-error-color, #cc0000);
+  border-radius: 4px;
+  margin-bottom: calc(var(--ring-unit) * 2);
+  color: var(--ring-error-color, #cc0000);
+}
+
 /* Table styles */
 .ring-table {
   width: 100%;

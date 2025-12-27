@@ -28,16 +28,20 @@ export type GetTestSuiteRes = {
 };
 
 export default function handle(ctx: CtxGet<GetTestSuiteRes, GetTestSuiteReq>): void {
+    const entities = require('@jetbrains/youtrack-scripting-api/entities');
     const project = ctx.project;
     
     // Extract query parameters safely (query might be undefined)
     const query = ctx.request.query || {};
     const testSuiteId = ctx.request.getParameter ? ctx.request.getParameter('id') : query.id;
 
-    // Load all test suites from project extension properties (inline)
+    // Find the YouTrack project entity for reading
+    const ytProject = entities.Project.findByKey(project.shortName || project.key);
+    
+    // Load all test suites from project extension properties
     let allSuites: TestSuiteItem[] = [];
     try {
-        const extProps = project.extensionProperties || {};
+        const extProps = ytProject?.extensionProperties || project.extensionProperties || {};
         const suitesJson = extProps.testSuites;
 
         if (suitesJson && typeof suitesJson === 'string') {

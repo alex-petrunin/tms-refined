@@ -5,60 +5,111 @@ import { TestSuite, TestSuiteID } from "../../domain/entities/TestSuite";
  * YouTrack implementation of TestSuiteRepository.
  * Stores test suites in project extension properties as JSON.
  * 
+ * Note: Unlike TestCases and TestRuns, TestSuites are NOT stored as issues.
+ * They are stored as JSON in project.extensionProperties.testSuites because:
+ * 1. The scripting API doesn't support persisting Issue drafts without REST API
+ * 2. Test suites are lightweight metadata containers for grouping test cases
+ * 3. This approach is simpler and works reliably in HTTP handlers
+ * 
  * IMPORTANT: All methods are SYNCHRONOUS because YouTrack's scripting
  * environment runs in a V8 isolate that doesn't support async/await.
  */
 export class YouTrackTestSuiteRepository implements TestSuiteRepository {
-    private projectId: string;
-    private projectExtProps: any;
+    private projectKey: string;
 
-    constructor(project: { id?: string; extensionProperties?: any }) {
-        this.projectId = project.id || '';
-        this.projectExtProps = project.extensionProperties || {};
+    constructor(project: { shortName?: string; key?: string }) {
+        this.projectKey = project.shortName || project.key || '';
     }
 
+    /**
+     * Save a test suite to project extension properties.
+     */
     save(testSuite: TestSuite): void {
-        const suites = this.findAll();
+        const entities = require('@jetbrains/youtrack-scripting-api/entities');
+        const project = entities.Project.findByKey(this.projectKey);
+        
+        if (!project) {
+            throw new Error(`Project not found: ${this.projectKey}`);
+        }
+
+        const suites = this.loadSuites(project);
         
         // Update or add the test suite
         const index = suites.findIndex(s => s.id === testSuite.id);
+        const suiteData = {
+            id: testSuite.id,
+            name: testSuite.name,
+            description: testSuite.description,
+            testCaseIDs: testSuite.testCaseIDs
+        };
+        
         if (index >= 0) {
-            suites[index] = testSuite;
+            suites[index] = suiteData;
         } else {
-            suites.push(testSuite);
+            suites.push(suiteData);
         }
 
-        this.saveAll(suites);
+        this.saveSuites(project, suites);
     }
 
+    /**
+     * Find a test suite by its ID.
+     */
     findByID(id: TestSuiteID): TestSuite | null {
-        const suites = this.findAll();
-        return suites.find(s => s.id === id) || null;
+        const entities = require('@jetbrains/youtrack-scripting-api/entities');
+        const project = entities.Project.findByKey(this.projectKey);
+        
+        if (!project) {
+            return null;
+        }
+
+        const suites = this.loadSuites(project);
+        const suiteData = suites.find(s => s.id === id);
+        
+        if (!suiteData) {
+            return null;
+        }
+
+        return new TestSuite(
+            suiteData.id,
+            suiteData.name,
+            suiteData.description,
+            suiteData.testCaseIDs
+        );
     }
 
+    /**
+     * Find all test suites in the project.
+     */
     findAll(): TestSuite[] {
-        const suitesJson = this.projectExtProps.testSuites;
-
-        if (!suitesJson || typeof suitesJson !== 'string') {
+        const entities = require('@jetbrains/youtrack-scripting-api/entities');
+        const project = entities.Project.findByKey(this.projectKey);
+        
+        if (!project) {
             return [];
         }
 
-        try {
-            const suitesData = JSON.parse(suitesJson);
-            return suitesData.map((data: any) => new TestSuite(
-                data.id,
-                data.name,
-                data.description || '',
-                data.testCaseIDs || []
-            ));
-        } catch (error) {
-            console.error("Failed to parse test suites:", error);
-            return [];
-        }
+        const suites = this.loadSuites(project);
+        return suites.map(data => new TestSuite(
+            data.id,
+            data.name,
+            data.description,
+            data.testCaseIDs
+        ));
     }
 
+    /**
+     * Delete a test suite.
+     */
     delete(id: TestSuiteID): boolean {
-        const suites = this.findAll();
+        const entities = require('@jetbrains/youtrack-scripting-api/entities');
+        const project = entities.Project.findByKey(this.projectKey);
+        
+        if (!project) {
+            return false;
+        }
+
+        const suites = this.loadSuites(project);
         const initialLength = suites.length;
         const filtered = suites.filter(s => s.id !== id);
         
@@ -66,25 +117,31 @@ export class YouTrackTestSuiteRepository implements TestSuiteRepository {
             return false; // Not found
         }
         
-        this.saveAll(filtered);
+        this.saveSuites(project, filtered);
         return true;
     }
 
-    private saveAll(suites: TestSuite[]): void {
-        const suitesData = suites.map(suite => ({
-            id: suite.id,
-            name: suite.name,
-            description: suite.description,
-            testCaseIDs: suite.testCaseIDs
-        }));
+    /**
+     * Load suites from project extension properties.
+     */
+    private loadSuites(project: any): Array<{id: string; name: string; description: string; testCaseIDs: string[]}> {
+        try {
+            const extProps = project.extensionProperties || {};
+            const suitesJson = extProps.testSuites;
 
-        const suitesJson = JSON.stringify(suitesData);
+            if (suitesJson && typeof suitesJson === 'string') {
+                return JSON.parse(suitesJson);
+            }
+        } catch (error) {
+            console.error("Failed to parse test suites:", error);
+        }
+        return [];
+    }
 
-        // Use YouTrack scripting API to persist to project extension properties
-        // This require is external and provided by YouTrack runtime
-        const entities = require('@jetbrains/youtrack-scripting-api/entities');
-        const project = entities.Project.findById(this.projectId);
-        project.extensionProperties.testSuites = suitesJson;
+    /**
+     * Save suites to project extension properties.
+     */
+    private saveSuites(project: any, suites: Array<{id: string; name: string; description: string; testCaseIDs: string[]}>): void {
+        project.extensionProperties.testSuites = JSON.stringify(suites);
     }
 }
-

@@ -47,6 +47,10 @@
           "type": "string",
           "description": "Comma-separated list of test case IDs (for test runs)"
         },
+        "testCaseIDs": {
+          "type": "string",
+          "description": "Comma-separated list of test case IDs (for test suites stored as issues)"
+        },
         "idempotencyKey": {
           "type": "string",
           "description": "Idempotency key for test run deduplication"
