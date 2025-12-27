@@ -1,3 +1,6 @@
+import { YouTrackTestSuiteRepository } from "../../../infrastructure/adapters/YouTrackTestSuiteRepository";
+import { CreateTestSuiteUseCase } from "../../../application/usecases/CreateTestSuite";
+
 /**
  * @zod-to-schema
  */
@@ -28,57 +31,30 @@ export default function handle(ctx: CtxPost<CreateTestSuiteReq, CreateTestSuiteR
         return;
     }
 
-    // Generate unique ID for the test suite
-    const testSuiteId = `ts-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    // Create repository and use case
+    const repository = new YouTrackTestSuiteRepository(project);
+    const createUseCase = new CreateTestSuiteUseCase(repository);
 
-    // Load existing test suites from project extension properties
-    const extProps = (project as any).extensionProperties || {};
-    let suites: Array<{ id: string; name: string; description: string; testCaseIDs: string[] }> = [];
-    
-    if (extProps.testSuites && typeof extProps.testSuites === 'string') {
-        try {
-            suites = JSON.parse(extProps.testSuites);
-        } catch (e) {
-            suites = [];
-        }
-    }
-
-    // Create new test suite
-    const newSuite = {
-        id: testSuiteId,
-        name: body.name,
-        description: body.description || '',
-        testCaseIDs: []
-    };
-
-    // Add to collection
-    suites.push(newSuite);
-
-    // Save back to project extension properties using scripting API
     try {
-        const entities = require('@jetbrains/youtrack-scripting-api/entities');
-        const projectEntity = entities.Project.findById(project.id);
-        if (projectEntity) {
-            projectEntity.extensionProperties.testSuites = JSON.stringify(suites);
-        } else {
-            // Fallback: set directly on context project's extensionProperties
-            (project as any).extensionProperties.testSuites = JSON.stringify(suites);
-        }
-    } catch (e) {
-        // Scripting API not available - set property directly on extensionProperties object
-        (project as any).extensionProperties.testSuites = JSON.stringify(suites);
+        // Execute use case - returns the created test suite
+        const testSuite = createUseCase.execute({
+            name: body.name,
+            description: body.description
+        });
+
+        // Return the created test suite
+        const response: CreateTestSuiteRes = {
+            id: testSuite.id,
+            name: testSuite.name,
+            description: testSuite.description,
+            testCaseIDs: testSuite.testCaseIDs
+        };
+
+        ctx.response.json(response);
+    } catch (error: any) {
+        ctx.response.code = 500;
+        ctx.response.json({ error: error.message || 'Failed to create test suite' } as any);
     }
-
-    // Return the created test suite
-    const response: CreateTestSuiteRes = {
-        id: newSuite.id,
-        name: newSuite.name,
-        description: newSuite.description,
-        testCaseIDs: newSuite.testCaseIDs
-    };
-
-    ctx.response.json(response);
 }
 
 export type Handle = typeof handle;
-
