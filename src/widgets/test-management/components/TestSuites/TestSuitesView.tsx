@@ -1,5 +1,4 @@
 import {memo, useState, useCallback} from 'react';
-import {type ApiRouter} from '@/api/api';
 import {useTestSuites} from '../../hooks/useTestSuites';
 import {LoadingState} from '../shared/LoadingState';
 import {ErrorState} from '../shared/ErrorState';
@@ -9,7 +8,6 @@ import {TestSuiteForm} from './TestSuiteForm';
 import Button from '@jetbrains/ring-ui-built/components/button/button';
 
 interface TestSuitesViewProps {
-  api: ReturnType<typeof import('@/api').createApi<ApiRouter>>;
   projectId?: string;
 }
 
