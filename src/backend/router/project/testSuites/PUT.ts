@@ -1,7 +1,3 @@
-import { YouTrackTestSuiteRepository } from "../../../infrastructure/adapters/YouTrackTestSuiteRepository";
-import { UpdateTestSuiteMetadataUseCase } from "../../../application/usecases/UpdateTestSuiteMetadata";
-import { UpdateTestSuiteCompositionUseCase } from "../../../application/usecases/UpdateTestSuiteComposition";
-
 /**
  * @zod-to-schema
  */
@@ -35,49 +31,54 @@ export default function handle(ctx: CtxPut<UpdateTestSuiteReq, UpdateTestSuiteRe
         return;
     }
 
-    // Create repository
-    const repository = new YouTrackTestSuiteRepository(project);
-
     try {
-        let testSuite = repository.findByID(testSuiteId);
+        // Load existing test suites (inline)
+        let suites: Array<{id: string; name: string; description: string; testCaseIDs: string[]}> = [];
+        const extProps = project.extensionProperties || {};
+        const suitesJson = extProps.testSuites;
         
-        if (!testSuite) {
+        if (suitesJson && typeof suitesJson === 'string') {
+            suites = JSON.parse(suitesJson);
+        }
+        
+        // Find the test suite to update
+        const suiteIndex = suites.findIndex(s => s.id === testSuiteId);
+        
+        if (suiteIndex === -1) {
             ctx.response.code = 404;
             ctx.response.json({ error: 'Test suite not found' } as any);
             return;
         }
 
-        // Update metadata if provided
-        if (body.name !== undefined || body.description !== undefined) {
-            const updateMetadataUseCase = new UpdateTestSuiteMetadataUseCase(repository);
-            testSuite = updateMetadataUseCase.execute({
-                testSuiteID: testSuiteId,
-                name: body.name,
-                description: body.description
-            });
+        // Update fields if provided
+        const suite = suites[suiteIndex];
+        if (body.name !== undefined) {
+            suite.name = body.name;
+        }
+        if (body.description !== undefined) {
+            suite.description = body.description;
+        }
+        if (body.testCaseIDs !== undefined) {
+            suite.testCaseIDs = body.testCaseIDs;
         }
 
-        // Update composition if provided
-        if (body.testCaseIDs !== undefined) {
-            const updateCompositionUseCase = new UpdateTestSuiteCompositionUseCase(repository);
-            testSuite = updateCompositionUseCase.execute({
-                testSuiteID: testSuiteId,
-                testCaseIDs: body.testCaseIDs
-            });
-        }
+        // Save updated test suites using YouTrack scripting API
+        const entities = require('@jetbrains/youtrack-scripting-api/entities');
+        // Use findByKey with project shortName (e.g., "DEM")
+        const ytProject = entities.Project.findByKey(project.shortName || project.key);
+        ytProject.extensionProperties.testSuites = JSON.stringify(suites);
 
         // Return the updated test suite
         const response: UpdateTestSuiteRes = {
-            id: testSuite.id,
-            name: testSuite.name,
-            description: testSuite.description,
-            testCaseIDs: testSuite.testCaseIDs
+            id: suite.id,
+            name: suite.name,
+            description: suite.description,
+            testCaseIDs: suite.testCaseIDs
         };
 
         ctx.response.json(response);
     } catch (error: any) {
-        const statusCode = error.message === 'Test Suite not found' ? 404 : 500;
-        ctx.response.code = statusCode;
+        ctx.response.code = 500;
         ctx.response.json({ error: error.message || 'Failed to update test suite' } as any);
     }
 }

@@ -1,6 +1,3 @@
-import { YouTrackTestSuiteRepository } from "../../../infrastructure/adapters/YouTrackTestSuiteRepository";
-import { CreateTestSuiteUseCase } from "../../../application/usecases/CreateTestSuite";
-
 /**
  * @zod-to-schema
  */
@@ -31,23 +28,44 @@ export default function handle(ctx: CtxPost<CreateTestSuiteReq, CreateTestSuiteR
         return;
     }
 
-    // Create repository and use case
-    const repository = new YouTrackTestSuiteRepository(project);
-    const createUseCase = new CreateTestSuiteUseCase(repository);
-
     try {
-        // Execute use case - returns the created test suite
-        const testSuite = createUseCase.execute({
+        // Load existing test suites (inline)
+        let suites: Array<{id: string; name: string; description: string; testCaseIDs: string[]}> = [];
+        const extProps = project.extensionProperties || {};
+        const suitesJson = extProps.testSuites;
+        
+        if (suitesJson && typeof suitesJson === 'string') {
+            suites = JSON.parse(suitesJson);
+        }
+
+        // Generate unique ID
+        const timestamp = Date.now().toString(36);
+        const random = Math.random().toString(36).substring(2, 8);
+        const newId = `ts_${timestamp}_${random}`;
+
+        // Create new test suite
+        const newTestSuite = {
+            id: newId,
             name: body.name,
-            description: body.description
-        });
+            description: body.description || '',
+            testCaseIDs: [] as string[]
+        };
+
+        // Add to suites array
+        suites.push(newTestSuite);
+
+        // Save to project extension properties using YouTrack scripting API
+        const entities = require('@jetbrains/youtrack-scripting-api/entities');
+        // Use findByKey with project shortName (e.g., "DEM")
+        const ytProject = entities.Project.findByKey(project.shortName || project.key);
+        ytProject.extensionProperties.testSuites = JSON.stringify(suites);
 
         // Return the created test suite
         const response: CreateTestSuiteRes = {
-            id: testSuite.id,
-            name: testSuite.name,
-            description: testSuite.description,
-            testCaseIDs: testSuite.testCaseIDs
+            id: newTestSuite.id,
+            name: newTestSuite.name,
+            description: newTestSuite.description,
+            testCaseIDs: newTestSuite.testCaseIDs
         };
 
         ctx.response.json(response);
