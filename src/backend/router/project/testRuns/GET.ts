@@ -14,7 +14,7 @@ export type GetTestRunReq = {
 /**
  * @zod-to-schema
  */
-export type GetTestRunRes = {
+export type GetTestRunItem = {
     id: string;
     testCaseIDs: string[];
     testSuiteID: string;
@@ -31,11 +31,11 @@ export type GetTestRunRes = {
  * @zod-to-schema
  */
 export type ListTestRunsRes = {
-    items: Array<GetTestRunRes>;
+    items: Array<GetTestRunItem>;
     total: number;
 };
 
-export default function handle(ctx: CtxGet<GetTestRunRes | ListTestRunsRes, GetTestRunReq>): void {
+export default function handle(ctx: CtxGet<ListTestRunsRes, GetTestRunReq>): void {
     const entities = require('@jetbrains/youtrack-scripting-api/entities');
     const search = require('@jetbrains/youtrack-scripting-api/search');
     const project = ctx.project;
@@ -83,7 +83,7 @@ export default function handle(ctx: CtxGet<GetTestRunRes | ListTestRunsRes, GetT
         }
 
         // Filter to only test runs (issues with testRunId extension property)
-        const testRuns: GetTestRunRes[] = [];
+        const testRuns: GetTestRunItem[] = [];
 
         for (let i = 0; i < issuesArray.length && i < 1000; i++) {
             const issue = issuesArray[i];
