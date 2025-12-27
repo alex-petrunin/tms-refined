@@ -1,23 +1,33 @@
-import { TestSuiteID } from "../../domain/entities/TestSuite";
+import { TestSuite, TestSuiteID } from "../../domain/entities/TestSuite";
 import { TestSuiteRepository } from "../ports/TestSuiteRepository";
 
-export interface UpdateTestSuiteMetadataInput{
+export interface UpdateTestSuiteMetadataInput {
     testSuiteID: TestSuiteID;
     name?: string;
     description?: string;
 }
 
-export class UpdateTestSuiteMetadataUseCase{
-    constructor(private repo: TestSuiteRepository){}
+/**
+ * Use case for updating test suite metadata (name, description).
+ * Synchronous - YouTrack scripting environment doesn't support async.
+ */
+export class UpdateTestSuiteMetadataUseCase {
+    constructor(private repo: TestSuiteRepository) {}
 
-    async execute(input: UpdateTestSuiteMetadataInput): Promise<void>{
-        const testSuite = await this.repo.findByID(input.testSuiteID);
-        if(!testSuite){
+    execute(input: UpdateTestSuiteMetadataInput): TestSuite {
+        const testSuite = this.repo.findByID(input.testSuiteID);
+        if (!testSuite) {
             throw new Error("Test Suite not found");
         }
         
-        testSuite.name = input.name || testSuite.name;
-        testSuite.description = input.description || testSuite.description;
-        await this.repo.save(testSuite);
+        if (input.name !== undefined) {
+            testSuite.name = input.name;
+        }
+        if (input.description !== undefined) {
+            testSuite.description = input.description;
+        }
+        
+        this.repo.save(testSuite);
+        return testSuite;
     }
 }
