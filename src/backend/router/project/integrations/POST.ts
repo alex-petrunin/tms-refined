@@ -4,7 +4,7 @@
 export type CreateIntegrationReq = {
     projectId: string;
     name: string;
-    type: 'GITLAB' | 'GITHUB' | 'JENKINS' | 'MANUAL';
+    type: 'GITLAB' | 'GITHUB' | 'MANUAL';
     enabled: boolean;
     config: {
         projectUrl?: string;
@@ -20,7 +20,7 @@ export type CreateIntegrationReq = {
 export type CreateIntegrationRes = {
     id: string;
     name: string;
-    type: 'GITLAB' | 'GITHUB' | 'JENKINS' | 'MANUAL';
+    type: 'GITLAB' | 'GITHUB' | 'MANUAL';
     enabled: boolean;
     config: {
         projectUrl?: string;

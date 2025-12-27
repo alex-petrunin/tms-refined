@@ -4,7 +4,7 @@
 export type GetIntegrationsReq = {
     projectId?: string;
     id?: string;
-    type?: 'GITLAB' | 'GITHUB' | 'JENKINS' | 'MANUAL';
+    type?: 'GITLAB' | 'GITHUB' | 'MANUAL';
     enabled?: boolean;
 };
 
@@ -24,7 +24,7 @@ export type IntegrationConfig = {
 export type IntegrationItem = {
     id: string;
     name: string;
-    type: 'GITLAB' | 'GITHUB' | 'JENKINS' | 'MANUAL';
+    type: 'GITLAB' | 'GITHUB' | 'MANUAL';
     enabled: boolean;
     config: IntegrationConfig;
 };

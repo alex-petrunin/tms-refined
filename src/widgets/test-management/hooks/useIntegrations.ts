@@ -12,7 +12,7 @@ export interface IntegrationConfig {
 export interface Integration {
   id: string;
   name: string;
-  type: 'GITLAB' | 'GITHUB' | 'JENKINS' | 'MANUAL';
+  type: 'GITLAB' | 'GITHUB' | 'MANUAL';
   enabled: boolean;
   config: IntegrationConfig;
 }

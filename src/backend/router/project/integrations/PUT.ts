@@ -5,7 +5,7 @@ export type UpdateIntegrationReq = {
     projectId: string;
     id: string;
     name?: string;
-    type?: 'GITLAB' | 'GITHUB' | 'JENKINS' | 'MANUAL';
+    type?: 'GITLAB' | 'GITHUB' | 'MANUAL';
     enabled?: boolean;
     config?: {
         projectUrl?: string;
@@ -21,7 +21,7 @@ export type UpdateIntegrationReq = {
 export type UpdateIntegrationRes = {
     id: string;
     name: string;
-    type: 'GITLAB' | 'GITHUB' | 'JENKINS' | 'MANUAL';
+    type: 'GITLAB' | 'GITHUB' | 'MANUAL';
     enabled: boolean;
     config: {
         projectUrl?: string;

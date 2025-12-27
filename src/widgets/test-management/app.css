@@ -239,6 +239,94 @@
   gap: calc(var(--ring-unit) * 2);
 }
 
+/* Swimlanes */
+.integrations-swimlanes {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--ring-unit) * 3);
+}
+
+.integration-swimlane {
+  background: var(--ring-content-background-color, #fff);
+  border: 1px solid var(--ring-line-color, #e0e0e0);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.swimlane-header {
+  padding: calc(var(--ring-unit) * 2);
+  background: var(--ring-sidebar-background-color, #fafafa);
+  border-bottom: 1px solid var(--ring-line-color, #e0e0e0);
+  border-left: 4px solid;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--ring-unit) * 2);
+}
+
+.swimlane-title {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--ring-unit));
+  flex: 1;
+  min-width: 200px;
+}
+
+.swimlane-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--ring-text-color, #333);
+}
+
+.swimlane-icon svg {
+  flex-shrink: 0;
+}
+
+.swimlane-title h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.swimlane-count {
+  background: var(--ring-badge-background-color, #e0e0e0);
+  color: var(--ring-text-color, #333);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.swimlane-description {
+  flex: 2;
+  margin: 0;
+  font-size: 13px;
+  color: var(--ring-secondary-color, #666);
+  min-width: 200px;
+}
+
+.swimlane-content {
+  padding: calc(var(--ring-unit) * 2);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: calc(var(--ring-unit) * 2);
+}
+
+.swimlane-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: calc(var(--ring-unit) * 2);
+  color: var(--ring-secondary-color, #666);
+  font-size: 14px;
+}
+
+.swimlane-empty p {
+  margin: 0;
+}
+
 .integration-card {
   border: 1px solid var(--ring-line-color, #e0e0e0);
   border-radius: 8px;
@@ -331,6 +419,31 @@
   margin-bottom: calc(var(--ring-unit) * 0.5);
   font-size: 13px;
   color: var(--ring-secondary-color, #666);
+}
+
+/* Fix toggle width in forms */
+.form-field-toggle .toggle-wrapper {
+  display: inline-block;
+}
+
+.toggle-wrapper [class*="toggle"] {
+  width: auto !important;
+  min-width: auto !important;
+}
+
+/* Integration icon in card */
+.integration-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--ring-text-color, #333);
+  flex-shrink: 0;
+}
+
+.integration-icon svg {
+  flex-shrink: 0;
 }
 
 /* Action buttons */
