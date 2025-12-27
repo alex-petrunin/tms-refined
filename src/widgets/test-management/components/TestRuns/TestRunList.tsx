@@ -1,7 +1,6 @@
-import React, {memo, useMemo} from 'react';
+import {memo, useMemo} from 'react';
 import SimpleTable from '@jetbrains/ring-ui-built/components/table/simple-table';
 import type {Column} from '@jetbrains/ring-ui-built/components/table/header-cell';
-import Tag from '@jetbrains/ring-ui-built/components/tag/tag';
 
 interface TestRun {
   id: string;
@@ -21,28 +20,30 @@ interface TestRunListProps {
 }
 
 export const TestRunList = memo<TestRunListProps>(({testRuns}) => {
-  const getStatusColor = (status: string) => {
+  const getStatusClass = (status: string): string => {
     switch (status) {
       case 'PASSED':
-        return Tag.Color.GREEN;
+        return 'status-passed';
       case 'FAILED':
-        return Tag.Color.RED;
+        return 'status-failed';
       case 'RUNNING':
-        return Tag.Color.BLUE;
+        return 'status-running';
       case 'PENDING':
-        return Tag.Color.GRAY;
+        return 'status-pending';
+      case 'AWAITING_EXTERNAL_RESULTS':
+        return 'status-awaiting';
       default:
-        return Tag.Color.GRAY;
+        return 'status-default';
     }
   };
 
-  const data = testRuns.map(testRun => ({
+  const data = useMemo(() => testRuns.map(testRun => ({
     id: testRun.id,
     testSuiteID: testRun.testSuiteID,
     testCaseCount: testRun.testCaseIDs.length,
     status: testRun.status,
     executionTarget: `${testRun.executionTarget.type}: ${testRun.executionTarget.name}`
-  }));
+  })), [testRuns]);
 
   const columns: Column<typeof data[0]>[] = useMemo(() => [
     {id: 'id', title: 'ID'},
@@ -52,9 +53,9 @@ export const TestRunList = memo<TestRunListProps>(({testRuns}) => {
       id: 'status',
       title: 'Status',
       getValue: (item) => (
-        <Tag color={getStatusColor(item.status)}>
+        <span className={`status-badge ${getStatusClass(item.status)}`}>
           {item.status}
-        </Tag>
+        </span>
       )
     },
     {id: 'executionTarget', title: 'Execution Target'}
@@ -70,4 +71,3 @@ export const TestRunList = memo<TestRunListProps>(({testRuns}) => {
 });
 
 TestRunList.displayName = 'TestRunList';
-

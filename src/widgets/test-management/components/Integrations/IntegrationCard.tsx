@@ -1,6 +1,4 @@
-import React, {memo} from 'react';
-import {type ApiRouter} from '@/api/api';
-import Tag from '@jetbrains/ring-ui-built/components/tag/tag';
+import {memo} from 'react';
 import Button from '@jetbrains/ring-ui-built/components/button/button';
 
 interface Integration {
@@ -12,7 +10,7 @@ interface Integration {
 
 interface IntegrationCardProps {
   integration: Integration;
-  api: ReturnType<typeof import('@/api').createApi<ApiRouter>>;
+  projectId?: string;
 }
 
 export const IntegrationCard = memo<IntegrationCardProps>(({integration}) => {
@@ -20,9 +18,9 @@ export const IntegrationCard = memo<IntegrationCardProps>(({integration}) => {
     <div className="integration-card">
       <div className="integration-header">
         <h3>{integration.name}</h3>
-        <Tag color={integration.enabled ? Tag.Color.GREEN : Tag.Color.GRAY}>
+        <span className={`status-badge ${integration.enabled ? 'status-passed' : 'status-default'}`}>
           {integration.enabled ? 'Enabled' : 'Disabled'}
-        </Tag>
+        </span>
       </div>
       <p>Type: {integration.type}</p>
       <div className="integration-actions">
@@ -33,4 +31,3 @@ export const IntegrationCard = memo<IntegrationCardProps>(({integration}) => {
 });
 
 IntegrationCard.displayName = 'IntegrationCard';
-

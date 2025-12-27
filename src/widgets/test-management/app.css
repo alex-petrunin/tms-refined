@@ -138,6 +138,17 @@
   font-size: 18px;
 }
 
+.form-field {
+  margin-bottom: calc(var(--ring-unit) * 2);
+}
+
+.form-label {
+  display: block;
+  margin-bottom: calc(var(--ring-unit) * 0.5);
+  font-size: 13px;
+  color: var(--ring-secondary-color, #666);
+}
+
 .form-actions {
   display: flex;
   gap: calc(var(--ring-unit));
@@ -273,6 +284,46 @@
 /* Table styles */
 .ring-table {
   width: 100%;
+}
+
+/* Status badges */
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status-passed {
+  background: #e6f7e6;
+  color: #1a7f1a;
+}
+
+.status-failed {
+  background: #ffebeb;
+  color: #cc0000;
+}
+
+.status-running {
+  background: #e6f0ff;
+  color: #0052cc;
+}
+
+.status-pending {
+  background: #fff8e6;
+  color: #996600;
+}
+
+.status-awaiting {
+  background: #f0e6ff;
+  color: #6600cc;
+}
+
+.status-default {
+  background: #f0f0f0;
+  color: #666666;
 }
 
 /* Responsive design */

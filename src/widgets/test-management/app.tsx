@@ -1,4 +1,4 @@
-import React, {memo, useState, useCallback, useMemo} from 'react';
+import {memo, useState, useCallback} from 'react';
 import type {FC} from "react";
 import {createApi} from "@/api";
 import {createComponentLogger} from "@/common/utils/logger.ts";
@@ -22,10 +22,9 @@ const AppComponent: FC = () => {
 
 
     // Get settings using host.fetchApp with scope: false (no entity context required)
-    const {settings} = useSettings(host);
-    // const projectId = useMemo(() => {
-    //   return settings.testCaseProjects?.key
-    // }, [settings.testCaseProjects]);
+    const {settings: _settings} = useSettings(host);
+    // TODO: Use settings to get projectId dynamically
+    // const projectId = settings.testCaseProjects?.[0]?.key;
     const projectId = "DEM";
 
 
@@ -39,11 +38,11 @@ const AppComponent: FC = () => {
             case 'test-suites':
                 return <TestSuitesView projectId={projectId || undefined}/>;
             case 'test-cases':
-                return <TestCasesView api={api} projectId={projectId || undefined}/>;
+                return <TestCasesView projectId={projectId || undefined}/>;
             case 'test-runs':
-                return <TestRunsView api={api} projectId={projectId || undefined}/>;
+                return <TestRunsView projectId={projectId || undefined}/>;
             case 'integrations':
-                return <IntegrationsView api={api} projectId={projectId || undefined}/>;
+                return <IntegrationsView projectId={projectId || undefined}/>;
             case 'query':
                 return <QueryView api={api} projectId={projectId || undefined}/>;
             default:

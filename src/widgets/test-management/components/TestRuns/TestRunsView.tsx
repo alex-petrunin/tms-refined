@@ -1,5 +1,4 @@
 import React, {memo, useState, useCallback} from 'react';
-import {type ApiRouter} from '@/api/api';
 import {useTestRuns} from '../../hooks/useTestRuns';
 import {LoadingState} from '../shared/LoadingState';
 import {ErrorState} from '../shared/ErrorState';
@@ -9,16 +8,15 @@ import {RunTestCasesDialog} from './RunTestCasesDialog';
 import Button from '@jetbrains/ring-ui-built/components/button/button';
 
 interface TestRunsViewProps {
-  api: ReturnType<typeof import('@/api').createApi<ApiRouter>>;
   projectId?: string;
 }
 
-export const TestRunsView = memo<TestRunsViewProps>(({api, projectId}) => {
+export const TestRunsView = memo<TestRunsViewProps>(({projectId}) => {
   const [showRunDialog, setShowRunDialog] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [suiteFilter, setSuiteFilter] = useState<string>('');
   
-  const {testRuns, total, loading, error, refetch} = useTestRuns(api, {
+  const {testRuns, total, loading, error, refetch} = useTestRuns({
     projectId,
     status: statusFilter || undefined,
     suiteId: suiteFilter || undefined,
@@ -76,7 +74,7 @@ export const TestRunsView = memo<TestRunsViewProps>(({api, projectId}) => {
       </div>
       {showRunDialog && (
         <RunTestCasesDialog
-          api={api}
+          projectId={projectId || ''}
           onClose={handleDialogClose}
         />
       )}
@@ -94,4 +92,3 @@ export const TestRunsView = memo<TestRunsViewProps>(({api, projectId}) => {
 });
 
 TestRunsView.displayName = 'TestRunsView';
-

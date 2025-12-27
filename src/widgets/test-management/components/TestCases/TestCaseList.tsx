@@ -5,14 +5,10 @@ import Button from '@jetbrains/ring-ui-built/components/button/button';
 
 interface TestCase {
   id: string;
+  issueId?: string;
   summary: string;
   description: string;
-  executionTargetSnapshot?: {
-    id: string;
-    name: string;
-    type: string;
-    ref: string;
-  };
+  suiteId?: string;
 }
 
 interface TestCaseListProps {
@@ -21,28 +17,27 @@ interface TestCaseListProps {
 }
 
 export const TestCaseList = memo<TestCaseListProps>(({testCases, onEdit}) => {
-  const data = testCases.map(testCase => ({
+  const data = useMemo(() => testCases.map(testCase => ({
     id: testCase.id,
     summary: testCase.summary,
-    description: testCase.description,
-    executionTarget: testCase.executionTargetSnapshot 
-      ? `${testCase.executionTargetSnapshot.type}: ${testCase.executionTargetSnapshot.name}`
-      : 'None',
-    actions: testCase.id
-  }));
+    description: testCase.description || '-'
+  })), [testCases]);
 
   const columns: Column<typeof data[0]>[] = useMemo(() => [
+    {id: 'id', title: 'ID'},
     {id: 'summary', title: 'Summary'},
     {id: 'description', title: 'Description'},
-    {id: 'executionTarget', title: 'Execution Target'},
     {
       id: 'actions',
       title: 'Actions',
-      getValue: (item) => (
-        <Button onClick={() => onEdit(item.id)}>
-          Edit
-        </Button>
-      )
+      getValue: (item) => {
+        const testCaseId = item.id;
+        return (
+          <Button onClick={() => onEdit(testCaseId)}>
+            Edit
+          </Button>
+        );
+      }
     }
   ], [onEdit]);
 

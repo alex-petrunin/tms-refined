@@ -1,13 +1,11 @@
 import React, {memo} from 'react';
-import {type ApiRouter} from '@/api/api';
 import {IntegrationCard} from './IntegrationCard';
 
 interface IntegrationsViewProps {
-  api: ReturnType<typeof import('@/api').createApi<ApiRouter>>;
   projectId?: string;
 }
 
-export const IntegrationsView = memo<IntegrationsViewProps>(({api, projectId}) => {
+export const IntegrationsView = memo<IntegrationsViewProps>(({projectId}) => {
   const integrations = [
     {id: 'gitlab', name: 'GitLab CI', type: 'GITLAB', enabled: false},
     {id: 'github', name: 'GitHub Actions', type: 'GITHUB', enabled: false},
@@ -25,7 +23,7 @@ export const IntegrationsView = memo<IntegrationsViewProps>(({api, projectId}) =
           <IntegrationCard
             key={integration.id}
             integration={integration}
-            api={api}
+            projectId={projectId}
           />
         ))}
       </div>
@@ -34,4 +32,3 @@ export const IntegrationsView = memo<IntegrationsViewProps>(({api, projectId}) =
 });
 
 IntegrationsView.displayName = 'IntegrationsView';
-

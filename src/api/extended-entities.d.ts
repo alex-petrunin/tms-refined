@@ -6,6 +6,7 @@ import type { Issue, Project } from '@jetbrains/youtrack-enhanced-dx-tools/youtr
 export interface ExtendedIssue extends Issue {
   extensionProperties: {
   readonly testCaseId?: string;
+  readonly suiteId?: string;
   readonly testCaseSummary?: string;
   readonly testCaseDescription?: string;
   readonly executionTargetId?: string;

@@ -1,5 +1,4 @@
 import React, {memo, useState, useCallback} from 'react';
-import {type ApiRouter} from '@/api/api';
 import {useTestCases} from '../../hooks/useTestCases';
 import {LoadingState} from '../shared/LoadingState';
 import {ErrorState} from '../shared/ErrorState';
@@ -9,17 +8,16 @@ import {TestCaseForm} from './TestCaseForm';
 import Button from '@jetbrains/ring-ui-built/components/button/button';
 
 interface TestCasesViewProps {
-  api: ReturnType<typeof import('@/api').createApi<ApiRouter>>;
   projectId?: string;
 }
 
-export const TestCasesView = memo<TestCasesViewProps>(({api, projectId}) => {
+export const TestCasesView = memo<TestCasesViewProps>(({projectId}) => {
   const [showForm, setShowForm] = useState(false);
   const [editingCase, setEditingCase] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [suiteFilter, setSuiteFilter] = useState<string>('');
   
-  const {testCases, total, loading, error, refetch} = useTestCases(api, {
+  const {testCases, total, loading, error, refetch} = useTestCases({
     projectId,
     search,
     suiteId: suiteFilter || undefined,
@@ -53,8 +51,8 @@ export const TestCasesView = memo<TestCasesViewProps>(({api, projectId}) => {
   if (showForm) {
     return (
       <TestCaseForm
-        api={api}
         caseId={editingCase}
+        projectId={projectId || ''}
         onClose={handleFormClose}
       />
     );
@@ -104,4 +102,3 @@ export const TestCasesView = memo<TestCasesViewProps>(({api, projectId}) => {
 });
 
 TestCasesView.displayName = 'TestCasesView';
-

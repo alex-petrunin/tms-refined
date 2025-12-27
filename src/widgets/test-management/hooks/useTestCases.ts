@@ -1,16 +1,13 @@
-import {useState, useEffect, useCallback} from 'react';
-import {type ApiRouter} from '@/api/api';
+import { useQuery } from '@tanstack/react-query';
+import { useHost } from '@/widgets/common/hooks/use-host.tsx';
+import { createApi } from '@/api';
 
 interface TestCase {
   id: string;
+  issueId?: string;
   summary: string;
   description: string;
-  executionTargetSnapshot?: {
-    id: string;
-    name: string;
-    type: string;
-    ref: string;
-  };
+  suiteId?: string;
 }
 
 interface UseTestCasesOptions {
@@ -29,20 +26,35 @@ interface UseTestCasesResult {
   refetch: () => void;
 }
 
+interface TestCasesResponse {
+  items: TestCase[];
+  total: number;
+}
+
 export function useTestCases(
-  api: ReturnType<typeof import('@/api').createApi<ApiRouter>>,
   options: UseTestCasesOptions = {}
 ): UseTestCasesResult {
-  const [testCases, setTestCases] = useState<TestCase[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const host = useHost();
+  const api = createApi(host);
 
-  const fetchTestCases = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<TestCasesResponse, Error>({
+    queryKey: [
+      'test-cases',
+      options.projectId,
+      options.limit,
+      options.offset,
+      options.search,
+      options.suiteId,
+    ],
+    enabled: Boolean(options.projectId),
+    queryFn: async () => {
       const params: Record<string, unknown> = {};
+
       if (options.projectId) params.projectId = options.projectId;
       if (options.limit !== undefined) params.limit = options.limit;
       if (options.offset !== undefined) params.offset = options.offset;
@@ -50,33 +62,29 @@ export function useTestCases(
       if (options.suiteId) params.suiteId = options.suiteId;
 
       const response = await api.project.testCases.GET(params as any);
-      
-      // Handle both single item and list responses
-      if ('items' in response) {
-        setTestCases(response.items);
-        setTotal(response.total);
-      } else {
-        // Single item response
-        setTestCases([response]);
-        setTotal(1);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch test cases'));
-    } finally {
-      setLoading(false);
-    }
-  }, [api, options.projectId, options.limit, options.offset, options.search, options.suiteId]);
 
-  useEffect(() => {
-    fetchTestCases();
-  }, [fetchTestCases]);
+      // Normalize response shape
+      if ('items' in response) {
+        return {
+          items: response.items,
+          total: response.total,
+        };
+      }
+
+      return {
+        items: [response],
+        total: 1,
+      };
+    },
+    keepPreviousData: true,
+    staleTime: 30_000,
+  });
 
   return {
-    testCases,
-    total,
-    loading,
-    error,
-    refetch: fetchTestCases
+    testCases: data?.items ?? [],
+    total: data?.total ?? 0,
+    loading: isLoading,
+    error: error ?? null,
+    refetch,
   };
 }
-

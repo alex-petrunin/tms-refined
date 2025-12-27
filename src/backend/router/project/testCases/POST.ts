@@ -1,13 +1,11 @@
-import {Project} from "@/api/youtrack-types";
-import { CreateTestCaseUseCase } from "@/backend/application/usecases/CreateTestCase";
-import { InMemoryTestCaseRepository } from "@/backend/infrastructure/inMemory/InMemoryTestCaseRepository";
-
 /**
  * @zod-to-schema
  */
 export type CreateTestCaseReq = {
+    projectId: string;
     summary: string;
     description?: string;
+    suiteId?: string;
 };
 
 /**
@@ -15,18 +13,15 @@ export type CreateTestCaseReq = {
  */
 export type CreateTestCaseRes = {
     id: string;
+    issueId: string;
     summary: string;
     description: string;
-    executionTargetSnapshot?: {
-        id: string;
-        name: string;
-        type: string;
-        ref: string;
-    };
+    suiteId?: string;
 };
 
 export default function handle(ctx: CtxPost<CreateTestCaseReq, CreateTestCaseRes>): void {
-    const project = ctx.project as Project;
+    const entities = require('@jetbrains/youtrack-scripting-api/entities');
+    const project = ctx.project;
     const body = ctx.request.json();
 
     // Validate required fields
@@ -36,42 +31,97 @@ export default function handle(ctx: CtxPost<CreateTestCaseReq, CreateTestCaseRes
         return;
     }
 
-    // Instantiate repository and use case
-    const repository = new InMemoryTestCaseRepository();
-    const createTestCaseUseCase = new CreateTestCaseUseCase(repository);
+    try {
+        // Find the YouTrack project entity
+        const ytProject = entities.Project.findByKey(project.shortName || project.key);
+        if (!ytProject) {
+            ctx.response.code = 404;
+            ctx.response.json({ error: 'Project not found' } as any);
+            return;
+        }
 
-    // Execute use case
-    createTestCaseUseCase.execute({
-        summary: body.summary,
-        description: body.description
-    }).then((testCaseId) => {
-        // Retrieve the created test case to return full details
-        return repository.findByID(testCaseId).then((testCase) => {
-            if (!testCase) {
-                ctx.response.code = 500;
-                ctx.response.json({ error: 'Failed to retrieve created test case' } as any);
-                return;
+        // Generate unique ID for the test case
+        const timestamp = Date.now().toString(36);
+        const random = Math.random().toString(36).substring(2, 8);
+        const testCaseId = `tc_${timestamp}_${random}`;
+
+        // Create the issue using the scripting API
+        const issue = new entities.Issue(ctx.currentUser, ytProject, body.summary);
+        
+        // Set description if provided
+        if (body.description) {
+            issue.description = body.description;
+        }
+
+        // Set testCaseId extension property
+        issue.extensionProperties.testCaseId = testCaseId;
+
+        // Set TMS Kind custom field to "Test Case" if it exists
+        try {
+            const kindField = issue.project.findFieldByName('TMS Kind');
+            if (kindField) {
+                const testCaseValue = kindField.findValueByName('Test Case');
+                if (testCaseValue) {
+                    issue.fields['TMS Kind'] = testCaseValue;
+                }
             }
+        } catch (fieldError) {
+            console.warn('Could not set TMS Kind field:', fieldError);
+        }
 
-            const response: CreateTestCaseRes = {
-                id: testCase.id,
-                summary: testCase.summary,
-                description: testCase.description,
-                executionTargetSnapshot: testCase.executionTargetSnapshot ? {
-                    id: testCase.executionTargetSnapshot.id,
-                    name: testCase.executionTargetSnapshot.name,
-                    type: testCase.executionTargetSnapshot.type,
-                    ref: testCase.executionTargetSnapshot.ref
-                } : undefined
-            };
+        // Set Test Suite custom field if suiteId provided
+        let suiteName: string | undefined;
+        if (body.suiteId) {
+            issue.extensionProperties.suiteId = body.suiteId;
+            
+            try {
+                // Find suite name from project extension properties
+                const suitesJson = ytProject.extensionProperties.testSuites;
+                if (suitesJson) {
+                    const suites = JSON.parse(suitesJson);
+                    const suite = suites.find((s: any) => s.id === body.suiteId);
+                    if (suite) {
+                        suiteName = suite.name;
+                        
+                        // Set Test Suite custom field
+                        const testSuiteField = issue.project.findFieldByName('Test Suite');
+                        if (testSuiteField) {
+                            let testSuiteValue = testSuiteField.findValueByName(suite.name);
+                            if (!testSuiteValue) {
+                                // Create new value if it doesn't exist
+                                testSuiteValue = testSuiteField.createValue(suite.name);
+                            }
+                            if (testSuiteValue) {
+                                issue.fields['Test Suite'] = testSuiteValue;
+                            }
+                        }
+                        
+                        // Update suite's testCaseIDs array
+                        if (!suite.testCaseIDs.includes(testCaseId)) {
+                            suite.testCaseIDs.push(testCaseId);
+                            ytProject.extensionProperties.testSuites = JSON.stringify(suites);
+                        }
+                    }
+                }
+            } catch (suiteError) {
+                console.warn('Could not set Test Suite field:', suiteError);
+            }
+        }
 
-            ctx.response.json(response);
-        });
-    }).catch((error) => {
+        // Return the created test case
+        const response: CreateTestCaseRes = {
+            id: testCaseId,
+            issueId: issue.idReadable || issue.id || '',
+            summary: issue.summary || body.summary,
+            description: issue.description || body.description || '',
+            suiteId: body.suiteId
+        };
+
+        ctx.response.json(response);
+    } catch (error: any) {
         ctx.response.code = 500;
-        ctx.response.json({ error: error.message || 'Failed to create test case' } as any);
-    });
+        ctx.response.json({ error: error.message || `Failed to create test case: ${error}` } as any);
+    }
 }
 
 export type Handle = typeof handle;
-

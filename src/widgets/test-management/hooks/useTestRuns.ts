@@ -1,5 +1,6 @@
-import {useState, useEffect, useCallback} from 'react';
-import {type ApiRouter} from '@/api/api';
+import { useQuery } from '@tanstack/react-query';
+import { useHost } from '@/widgets/common/hooks/use-host.tsx';
+import { createApi } from '@/api';
 
 interface TestRun {
   id: string;
@@ -31,20 +32,36 @@ interface UseTestRunsResult {
   refetch: () => void;
 }
 
+interface TestRunsResponse {
+  items: TestRun[];
+  total: number;
+}
+
 export function useTestRuns(
-  api: ReturnType<typeof import('@/api').createApi<ApiRouter>>,
   options: UseTestRunsOptions = {}
 ): UseTestRunsResult {
-  const [testRuns, setTestRuns] = useState<TestRun[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const host = useHost();
+  const api = createApi(host);
 
-  const fetchTestRuns = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<TestRunsResponse, Error>({
+    queryKey: [
+      'test-runs',
+      options.projectId,
+      options.limit,
+      options.offset,
+      options.suiteId,
+      options.status,
+      options.testCaseId,
+    ],
+    enabled: Boolean(options.projectId),
+    queryFn: async () => {
       const params: Record<string, unknown> = {};
+
       if (options.projectId) params.projectId = options.projectId;
       if (options.limit !== undefined) params.limit = options.limit;
       if (options.offset !== undefined) params.offset = options.offset;
@@ -53,33 +70,29 @@ export function useTestRuns(
       if (options.testCaseId) params.testCaseId = options.testCaseId;
 
       const response = await api.project.testRuns.GET(params as any);
-      
-      // Handle both single item and list responses
-      if ('items' in response) {
-        setTestRuns(response.items);
-        setTotal(response.total);
-      } else {
-        // Single item response
-        setTestRuns([response]);
-        setTotal(1);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch test runs'));
-    } finally {
-      setLoading(false);
-    }
-  }, [api, options.projectId, options.limit, options.offset, options.suiteId, options.status, options.testCaseId]);
 
-  useEffect(() => {
-    fetchTestRuns();
-  }, [fetchTestRuns]);
+      // Normalize response shape
+      if ('items' in response) {
+        return {
+          items: response.items,
+          total: response.total,
+        };
+      }
+
+      return {
+        items: [response],
+        total: 1,
+      };
+    },
+    keepPreviousData: true,
+    staleTime: 30_000,
+  });
 
   return {
-    testRuns,
-    total,
-    loading,
-    error,
-    refetch: fetchTestRuns
+    testRuns: data?.items ?? [],
+    total: data?.total ?? 0,
+    loading: isLoading,
+    error: error ?? null,
+    refetch,
   };
 }
-

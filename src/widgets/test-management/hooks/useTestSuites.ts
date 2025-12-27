@@ -6,7 +6,7 @@ interface TestSuite {
   id: string;
   name: string;
   description: string;
-  testCaseIDs: string[];
+  testCaseCount: number;
 }
 
 interface UseTestSuitesOptions {

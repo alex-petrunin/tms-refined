@@ -7,6 +7,10 @@
           "type": "string",
           "description": "Unique identifier for the test case"
         },
+        "suiteId": {
+          "type": "string",
+          "description": "ID of the test suite this test case belongs to"
+        },
         "testCaseSummary": {
           "type": "string",
           "description": "Summary of the test case"

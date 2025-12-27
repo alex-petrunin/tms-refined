@@ -1,6 +1,3 @@
-import {Project, Issue} from "@/api/youtrack-types";
-import { YouTrackTestRunRepository } from "@/backend/infrastructure/adapters/YouTrackTestRunRepository";
-
 /**
  * @zod-to-schema
  */
@@ -39,146 +36,141 @@ export type ListTestRunsRes = {
 };
 
 export default function handle(ctx: CtxGet<GetTestRunRes | ListTestRunsRes, GetTestRunReq>): void {
-    const project = ctx.project as Project;
-    
-    // Extract test run ID from path or query parameter
-    const testRunId = ctx.request.getParameter('id') || extractIdFromPath(ctx.request.path);
-    const query = ctx.request.query;
+    const entities = require('@jetbrains/youtrack-scripting-api/entities');
+    const search = require('@jetbrains/youtrack-scripting-api/search');
+    const project = ctx.project;
 
-    // Instantiate repository with YouTrack adapter
-    const repository = new YouTrackTestRunRepository(
-        project,
-        ctx.settings,
-        undefined, // appHost - optional, will use scripting API if available
-        ctx.globalStorage // globalStorage for idempotency index
-    );
+    // Get query params using getParameter
+    const getParam = (name: string): string | undefined => {
+        if (ctx.request.getParameter) {
+            const val = ctx.request.getParameter(name);
+            return val || undefined;
+        }
+        return undefined;
+    };
 
-    // If ID is provided, return single test run
-    if (testRunId) {
-        repository.findById(testRunId).then((testRun) => {
-            if (!testRun) {
-                ctx.response.code = 404;
-                ctx.response.json({ error: 'Test run not found' } as any);
-                return;
+    const query = {
+        id: getParam('id'),
+        limit: getParam('limit') ? Number(getParam('limit')) : 50,
+        offset: getParam('offset') ? Number(getParam('offset')) : 0,
+        suiteId: getParam('suiteId'),
+        status: getParam('status'),
+        testCaseId: getParam('testCaseId')
+    };
+
+    console.log('[GET testRuns] Query params - id:', query.id, 'status:', query.status);
+
+    try {
+        // Find the YouTrack project entity
+        const ytProject = entities.Project.findByKey(project.shortName || project.key);
+        if (!ytProject) {
+            ctx.response.code = 404;
+            ctx.response.json({ error: 'Project not found' } as any);
+            return;
+        }
+
+        // Search for all issues in the project
+        const allIssues = search.search(ytProject, '') || [];
+
+        // Convert to array if needed (YouTrack returns a Set)
+        const issuesArray: any[] = [];
+        if (allIssues && typeof allIssues.forEach === 'function') {
+            allIssues.forEach((issue: any) => {
+                issuesArray.push(issue);
+            });
+        } else if (Array.isArray(allIssues)) {
+            issuesArray.push(...allIssues);
+        }
+
+        // Filter to only test runs (issues with testRunId extension property)
+        const testRuns: GetTestRunRes[] = [];
+
+        for (let i = 0; i < issuesArray.length && i < 1000; i++) {
+            const issue = issuesArray[i];
+            if (!issue) continue;
+
+            const extProps = issue.extensionProperties || {};
+            const testRunId = extProps.testRunId;
+
+            // Skip issues that are not test runs
+            if (!testRunId) {
+                continue;
             }
 
-            const response: GetTestRunRes = {
-                id: testRun.id,
-                testCaseIDs: testRun.testCaseIDs,
-                testSuiteID: testRun.testSuiteID,
-                status: testRun.status,
-                executionTarget: {
-                    id: testRun.executionTarget.id,
-                    name: testRun.executionTarget.name,
-                    type: testRun.executionTarget.type,
-                    ref: testRun.executionTarget.ref
-                }
-            };
+            // Filter by specific id if provided
+            if (query.id && testRunId !== query.id) {
+                continue;
+            }
 
-            ctx.response.json(response);
-        }).catch((error) => {
-            ctx.response.code = 500;
-            ctx.response.json({ error: error.message || 'Failed to retrieve test run' } as any);
-        });
-        return;
-    }
+            // Filter by suiteId if provided
+            const suiteId = extProps.testSuiteId || '';
+            if (query.suiteId && suiteId !== query.suiteId) {
+                continue;
+            }
 
-    // Otherwise, return list of test runs
-    const limit = query.limit ? parseInt(query.limit as string, 10) : 100;
-    const offset = query.offset ? parseInt(query.offset as string, 10) : 0;
-    const suiteId = query.suiteId as string | undefined;
-    const status = query.status as string | undefined;
-    const testCaseId = query.testCaseId as string | undefined;
+            // Filter by status if provided
+            const status = extProps.testRunStatus || 'PENDING';
+            if (query.status && status !== query.status) {
+                continue;
+            }
 
-    // Query all issues with testRunId extension property
-    findIssuesByExtensionProperty('testRunId', project, ctx.settings).then((issues) => {
-        // Map issues to test runs
-        let testRuns = issues.map(issue => {
-            const extProps = (issue as any).extensionProperties || {};
-            const trId = extProps.testRunId || issue.id!;
-            
-            // Parse test case IDs from comma-separated string or array
-            const testCaseIds = extProps.testCaseIds 
-                ? (typeof extProps.testCaseIds === 'string' 
-                    ? extProps.testCaseIds.split(',').map((id: string) => id.trim())
-                    : extProps.testCaseIds)
+            // Parse test case IDs from comma-separated string
+            const testCaseIdsStr = extProps.testCaseIds || '';
+            const testCaseIDs = testCaseIdsStr
+                ? testCaseIdsStr.split(',').map((id: string) => id.trim()).filter(Boolean)
                 : [];
 
-            return {
-                id: trId,
-                testCaseIDs: testCaseIds,
-                testSuiteID: extProps.testSuiteId || '',
-                status: extProps.testRunStatus || 'PENDING',
+            // Filter by testCaseId if provided
+            if (query.testCaseId && !testCaseIDs.includes(query.testCaseId)) {
+                continue;
+            }
+
+            testRuns.push({
+                id: testRunId,
+                testCaseIDs: testCaseIDs,
+                testSuiteID: suiteId,
+                status: status,
                 executionTarget: {
                     id: extProps.executionTargetId || '',
-                    name: extProps.executionTargetName || '',
-                    type: extProps.executionTargetType || '',
+                    name: extProps.executionTargetName || 'Manual',
+                    type: extProps.executionTargetType || 'MANUAL',
                     ref: extProps.executionTargetRef || ''
                 }
-            };
-        });
+            });
+        }
 
-        // Apply filters
-        if (suiteId) {
-            testRuns = testRuns.filter(tr => tr.testSuiteID === suiteId);
+        // If single ID was requested, return that item
+        if (query.id) {
+            if (testRuns.length === 0) {
+                ctx.response.code = 404;
+                ctx.response.json({ error: `Test run not found: ${query.id}` } as any);
+                return;
+            }
+            // Return as list format for consistency
+            const response: ListTestRunsRes = {
+                items: testRuns,
+                total: 1
+            };
+            ctx.response.json(response);
+            return;
         }
-        if (status) {
-            testRuns = testRuns.filter(tr => tr.status === status);
-        }
-        if (testCaseId) {
-            testRuns = testRuns.filter(tr => tr.testCaseIDs.includes(testCaseId));
-        }
+
+        // Calculate total before pagination
+        const total = testRuns.length;
 
         // Apply pagination
-        const total = testRuns.length;
-        const paginatedRuns = testRuns.slice(offset, offset + limit);
+        const paginatedItems = testRuns.slice(query.offset, query.offset + query.limit);
 
         const response: ListTestRunsRes = {
-            items: paginatedRuns,
-            total
+            items: paginatedItems,
+            total: total
         };
 
         ctx.response.json(response);
-    }).catch((error) => {
+    } catch (error: any) {
         ctx.response.code = 500;
-        ctx.response.json({ error: error.message || 'Failed to list test runs' } as any);
-    });
-}
-
-/**
- * Helper function to find issues by extension property
- */
-async function findIssuesByExtensionProperty(propertyName: string, project: Project, settings: AppSettings): Promise<Issue[]> {
-    // Try scripting API first
-    try {
-        const entities = require('@jetbrains/youtrack-scripting-api/entities');
-        const issues = entities.Issue.findByExtensionProperties({
-            [propertyName]: { $exists: true }
-        });
-        
-        if (issues && issues.size > 0) {
-            return Array.from(issues).map((issue: any) => ({
-                id: issue.id,
-                summary: issue.summary,
-                description: issue.description,
-                extensionProperties: issue.extensionProperties
-            } as Issue));
-        }
-    } catch (e) {
-        // Scripting API not available, fallback to empty array
+        ctx.response.json({ error: error.message || `Failed to fetch test runs: ${error}` } as any);
     }
-
-    return [];
-}
-
-/**
- * Extracts test run ID from path
- * Handles paths like: /project/testRuns/{id} or /testRuns/{id}
- */
-function extractIdFromPath(path: string): string | undefined {
-    const match = path.match(/\/testRuns\/([^\/\?]+)/);
-    return match ? match[1] : undefined;
 }
 
 export type Handle = typeof handle;
-

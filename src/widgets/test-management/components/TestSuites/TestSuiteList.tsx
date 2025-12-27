@@ -10,7 +10,7 @@ interface TestSuite {
   id: string;
   name: string;
   description: string;
-  testCaseIDs: string[];
+  testCaseCount: number;
 }
 
 interface TestSuiteListProps {
@@ -42,7 +42,7 @@ export const TestSuiteList = memo<TestSuiteListProps>(({suites, onEdit, onDelete
     id: suite.id,
     name: suite.name,
     description: suite.description,
-    testCaseCount: suite.testCaseIDs.length,
+    testCaseCount: suite.testCaseCount,
     actions: suite
   }));
 

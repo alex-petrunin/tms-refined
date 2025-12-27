@@ -4,6 +4,7 @@ import * as globalsettingsGETHandler from "../backend/router/global/settings/GET
 import * as projectdemoGETHandler from "../backend/router/project/demo/GET";
 import * as projecttestCasesGETHandler from "../backend/router/project/testCases/GET";
 import * as projecttestCasesPOSTHandler from "../backend/router/project/testCases/POST";
+import * as projecttestCasesPUTHandler from "../backend/router/project/testCases/PUT";
 import * as projecttestRunsGETHandler from "../backend/router/project/testRuns/GET";
 import * as projecttestRunsPOSTHandler from "../backend/router/project/testRuns/POST";
 import * as projecttestSuitesDELETEHandler from "../backend/router/project/testSuites/DELETE";
@@ -35,6 +36,7 @@ export type ApiRouter = {
     testCases: {
     GET: ExtractRPCFromHandler<projecttestCasesGETHandler.Handle>;
     POST: ExtractRPCFromHandler<projecttestCasesPOSTHandler.Handle>;
+    PUT: ExtractRPCFromHandler<projecttestCasesPUTHandler.Handle>;
     };
     testRuns: {
     GET: ExtractRPCFromHandler<projecttestRunsGETHandler.Handle>;
