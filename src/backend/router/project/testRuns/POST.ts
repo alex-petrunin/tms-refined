@@ -2,6 +2,7 @@
  * @zod-to-schema
  */
 export type CreateTestRunReq = {
+    projectId: string;
     suiteID: string;
     testCaseIDs: string[];
     executionMode?: "MANAGED" | "OBSERVED";

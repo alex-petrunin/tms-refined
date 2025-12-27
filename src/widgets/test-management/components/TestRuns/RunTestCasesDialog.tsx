@@ -111,6 +111,7 @@ export const RunTestCasesDialog = memo<RunTestCasesDialogProps>(({projectId, onC
       const testCaseIDs = selectedTestCases.map(tc => tc.key);
       
       await api.project.testRuns.POST({
+        projectId,
         suiteID: selectedSuite.key,
         testCaseIDs: testCaseIDs,
         executionMode
