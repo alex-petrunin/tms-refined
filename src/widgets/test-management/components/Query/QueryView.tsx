@@ -26,7 +26,7 @@ export const QueryView = memo<QueryViewProps>(({api, projectId}) => {
   return (
     <div className="query-view">
       <div className="view-header">
-        <h2>YouTrack Query</h2>
+        {/*<h2>YouTrack Query</h2>*/}
         <p>Query TMS entities using YouTrack query syntax</p>
       </div>
       <div className="query-controls">

@@ -213,7 +213,7 @@ export const IntegrationsView = memo<IntegrationsViewProps>(({projectId}) => {
     <div className="integrations-view">
       <div className="view-header">
         <div>
-          <h2>CI Integrations</h2>
+          {/*<h2>CI Integrations</h2>*/}
           <p>Configure execution targets for your test runs</p>
         </div>
       </div>
