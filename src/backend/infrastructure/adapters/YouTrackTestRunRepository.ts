@@ -26,17 +26,34 @@ export class YouTrackTestRunRepository implements TestRunRepository {
     }
 
     async save(testRun: TestRun, idempotencyKey?: IdempotencyKey): Promise<void> {
-        // Get project from settings (array of Project entities) or use current project
-        const testRunProjects = (this.settings.testRunProjects as Project[] | undefined) || [];
-        // Use first project from array, or current project if array is empty
-        const projectId = testRunProjects.length > 0 ? testRunProjects[0].id : this.project.id;
+        // Get project from settings (single Project object) or use current project
+        const testRunProjects = this.settings.testRunProjects as any;
+        let targetProject: Project;
+        
+        if (testRunProjects) {
+            // Extract project key from settings
+            const projectKey = testRunProjects.shortName || testRunProjects.key || testRunProjects.id;
+            const projectId = testRunProjects.id || projectKey;
+            targetProject = {
+                id: projectId,
+                key: projectKey,
+                shortName: projectKey,
+                name: testRunProjects.name
+            } as Project;
+        } else {
+            // Fallback to current project
+            targetProject = this.project;
+        }
+        
         const issueType = (this.settings.testRunIssueType as string) || "Test Run";
 
         // Check if issue already exists
         const existingIssue = await this.findIssueByTestRunId(testRun.id);
         
+        // Use project key (shortName) for REST API, or project object for scripting API
+        const projectKey = targetProject.shortName || targetProject.key || targetProject.id;
         const issueData: Partial<Issue> = {
-            project: { id: projectId },
+            project: { id: targetProject.id, key: projectKey },
             summary: `Test Run: ${testRun.testCaseIDs.length} test case(s)`,
             description: this.buildTestRunDescription(testRun),
         };
@@ -109,7 +126,18 @@ export class YouTrackTestRunRepository implements TestRunRepository {
 
         // Fallback to REST API via app host
         if (this.appHost && this.appHost.fetchYouTrack) {
-            const query = `project:${this.project.id} extensionProperties.testRunId:${testRunId}`;
+            // Get test runs project from settings for query
+            const testRunProjects = this.settings.testRunProjects as any;
+            let projectKey: string;
+            
+            if (testRunProjects) {
+                projectKey = testRunProjects.shortName || testRunProjects.key || testRunProjects.id;
+            } else {
+                // Fallback to current project
+                projectKey = this.project.shortName || this.project.key || this.project.id || '';
+            }
+            
+            const query = `project:${projectKey} extensionProperties.testRunId:${testRunId}`;
             const issues = await this.appHost.fetchYouTrack(
                 `issues?query=${encodeURIComponent(query)}&fields=id,summary,description,extensionProperties,links,customFields(name,value(name))`,
                 {}
@@ -174,9 +202,14 @@ export class YouTrackTestRunRepository implements TestRunRepository {
 
         // Use REST API via app host
         if (this.appHost && this.appHost.fetchYouTrack) {
+            // Use project key for REST API
+            const projectKey = issueData.project?.key || issueData.project?.id;
             const created = await this.appHost.fetchYouTrack('issues', {
                 method: 'POST',
-                body: payload,
+                body: {
+                    ...payload,
+                    project: { id: issueData.project?.id }
+                },
                 query: { fields: 'id,summary,description,extensionProperties,customFields(name,value(name))' }
             });
             return created as Issue;
@@ -185,7 +218,12 @@ export class YouTrackTestRunRepository implements TestRunRepository {
         // Fallback: Try scripting API
         try {
             const entities = require('@jetbrains/youtrack-scripting-api/entities');
-            const project = entities.Project.findById(this.project.id!);
+            // Use project key to find project
+            const projectKey = issueData.project?.key || issueData.project?.id || this.project.shortName || this.project.key;
+            const project = entities.Project.findByKey(projectKey);
+            if (!project) {
+                throw new Error(`Project not found: ${projectKey}`);
+            }
             const issue = entities.Issue.createSharedDraft(project);
             issue.summary = payload.summary;
             issue.description = payload.description;
@@ -195,6 +233,17 @@ export class YouTrackTestRunRepository implements TestRunRepository {
             issue.fields['Test Run Status'] = entities.TestRunStatus[this.mapTestStatusToFieldValue(testRun.status)];
             issue.fields['Execution Target Type'] = entities.ExecutionTargetType[this.mapExecutionTargetTypeToFieldValue(testRun.executionTarget.type)];
             issue.fields['Execution Target Reference'] = testRun.executionTarget.ref;
+            
+            // Set Execution Target Name if field exists
+            try {
+                const executionTargetNameField = project.findFieldByName('Execution Target Name');
+                if (executionTargetNameField && testRun.executionTarget.name) {
+                    issue.fields['Execution Target Name'] = testRun.executionTarget.name;
+                }
+            } catch (e) {
+                // Field might not exist, that's okay
+            }
+            
             if (testRun.testSuiteID) {
                 issue.fields['Test Suite'] = entities.TestSuite[testRun.testSuiteID];
             }
@@ -237,6 +286,15 @@ export class YouTrackTestRunRepository implements TestRunRepository {
                 $type: 'TextIssueCustomField'
             }
         ];
+        
+        // Add Execution Target Name if available
+        if (testRun.executionTarget.name) {
+            customFields.push({
+                name: 'Execution Target Name',
+                value: testRun.executionTarget.name,
+                $type: 'TextIssueCustomField'
+            });
+        }
 
         // Add Test Suite field if suite ID is available
         if (testRun.testSuiteID) {
@@ -604,7 +662,18 @@ export class YouTrackTestRunRepository implements TestRunRepository {
 
         // Fallback to REST API via app host
         if (this.appHost && this.appHost.fetchYouTrack) {
-            const query = `project:${this.project.id} extensionProperties.gitlabPipelineId:${pipelineId}`;
+            // Get test runs project from settings for query
+            const testRunProjects = this.settings.testRunProjects as any;
+            let projectKey: string;
+            
+            if (testRunProjects) {
+                projectKey = testRunProjects.shortName || testRunProjects.key || testRunProjects.id;
+            } else {
+                // Fallback to current project
+                projectKey = this.project.shortName || this.project.key || this.project.id || '';
+            }
+            
+            const query = `project:${projectKey} extensionProperties.gitlabPipelineId:${pipelineId}`;
             const issues = await this.appHost.fetchYouTrack(
                 `issues?query=${encodeURIComponent(query)}&fields=id,summary,description,extensionProperties,links,customFields(name,value(name))`,
                 {}

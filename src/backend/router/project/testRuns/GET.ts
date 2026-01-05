@@ -62,29 +62,47 @@ export default function handle(ctx: CtxGet<ListTestRunsRes, GetTestRunReq>): voi
     console.log('[GET testRuns] Query params - id:', query.id, 'status:', query.status);
 
     try {
-        // Find the YouTrack project entity
-        const ytProject = entities.Project.findByKey(project.shortName || project.key);
+        // Get test runs project from settings, or fallback to current project
+        const testRunProjects = ctx.settings.testRunProjects as any;
+        let targetProjectKey: string;
+        
+        if (testRunProjects) {
+            // Extract project key from settings (can be shortName, key, or id)
+            targetProjectKey = testRunProjects.shortName || testRunProjects.key || testRunProjects.id;
+        }
+        
+        // Fallback to current project if no test runs project configured
+        if (!targetProjectKey) {
+            targetProjectKey = project.shortName || project.key || '';
+        }
+        
+        // Find the YouTrack project entity for test runs
+        const ytProject = entities.Project.findByKey(targetProjectKey);
         if (!ytProject) {
             ctx.response.code = 404;
-            ctx.response.json({ error: 'Project not found' } as any);
+            ctx.response.json({ error: `Test runs project not found: ${targetProjectKey}` } as any);
             return;
         }
 
-        // Load suites to resolve names
+        // Load suites to resolve names - try to load from current project (where suites are stored)
         let suiteMap: Record<string, string> = {};
         try {
-            const suitesJson = ytProject.extensionProperties.testSuites;
-            if (suitesJson && typeof suitesJson === 'string') {
-                const suites = JSON.parse(suitesJson);
-                suiteMap = Object.fromEntries(
-                    suites.map((s: any) => [s.id, s.name])
-                );
+            // Suites are stored in the current project (test suites project), not test runs project
+            const currentProject = entities.Project.findByKey(project.shortName || project.key);
+            if (currentProject) {
+                const suitesJson = currentProject.extensionProperties.testSuites;
+                if (suitesJson && typeof suitesJson === 'string') {
+                    const suites = JSON.parse(suitesJson);
+                    suiteMap = Object.fromEntries(
+                        suites.map((s: any) => [s.id, s.name])
+                    );
+                }
             }
         } catch (e) {
             console.warn('[GET testRuns] Failed to load suites for name resolution:', e);
         }
 
-        // Search for all issues in the project
+        // Search for all issues in the test runs project
         const allIssues = search.search(ytProject, '') || [];
 
         // Convert to array if needed (YouTrack returns a Set)

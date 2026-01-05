@@ -50,11 +50,25 @@ export default function handle(ctx: CtxPost<CreateTestRunReq, CreateTestRunRes>)
     }
 
     try {
-        // Find the YouTrack project entity
-        const ytProject = entities.Project.findByKey(project.shortName || project.key);
+        // Get test runs project from settings, or fallback to current project
+        const testRunProjects = ctx.settings.testRunProjects as any;
+        let targetProjectKey: string;
+        
+        if (testRunProjects) {
+            // Extract project key from settings (can be shortName, key, or id)
+            targetProjectKey = testRunProjects.shortName || testRunProjects.key || testRunProjects.id;
+        }
+        
+        // Fallback to current project if no test runs project configured
+        if (!targetProjectKey) {
+            targetProjectKey = project.shortName || project.key || '';
+        }
+        
+        // Find the YouTrack project entity for test runs
+        const ytProject = entities.Project.findByKey(targetProjectKey);
         if (!ytProject) {
             ctx.response.code = 404;
-            ctx.response.json({ error: 'Project not found' } as any);
+            ctx.response.json({ error: `Test runs project not found: ${targetProjectKey}` } as any);
             return;
         }
 
@@ -96,8 +110,9 @@ export default function handle(ctx: CtxPost<CreateTestRunReq, CreateTestRunRes>)
         issue.extensionProperties.executionTargetType = executionTarget.type;
         issue.extensionProperties.executionTargetRef = executionTarget.ref;
 
-        // Set TMS Kind custom field to "Test Run" if it exists
+        // Set custom fields for execution metadata
         try {
+            // TMS Kind
             const kindField = issue.project.findFieldByName('TMS Kind');
             if (kindField) {
                 let testRunValue = kindField.findValueByName('Test Run');
@@ -108,8 +123,99 @@ export default function handle(ctx: CtxPost<CreateTestRunReq, CreateTestRunRes>)
                     issue.fields['TMS Kind'] = testRunValue;
                 }
             }
+            
+            // Test Run Status
+            const statusField = issue.project.findFieldByName('Test Run Status');
+            if (statusField) {
+                const statusValue = statusField.findValueByName(
+                    initialStatus === 'AWAITING_EXTERNAL_RESULTS' ? 'Awaiting External Results' :
+                    initialStatus === 'PENDING' ? 'Pending' :
+                    initialStatus === 'RUNNING' ? 'Running' :
+                    initialStatus === 'PASSED' ? 'Passed' :
+                    initialStatus === 'FAILED' ? 'Failed' : 'Pending'
+                );
+                if (statusValue) {
+                    issue.fields['Test Run Status'] = statusValue;
+                } else {
+                    // Create value if it doesn't exist
+                    const newStatusValue = statusField.createValue(
+                        initialStatus === 'AWAITING_EXTERNAL_RESULTS' ? 'Awaiting External Results' :
+                        initialStatus === 'PENDING' ? 'Pending' :
+                        initialStatus === 'RUNNING' ? 'Running' :
+                        initialStatus === 'PASSED' ? 'Passed' :
+                        initialStatus === 'FAILED' ? 'Failed' : 'Pending'
+                    );
+                    if (newStatusValue) {
+                        issue.fields['Test Run Status'] = newStatusValue;
+                    }
+                }
+            }
+            
+            // Execution Target Type
+            const executionTargetTypeField = issue.project.findFieldByName('Execution Target Type');
+            if (executionTargetTypeField) {
+                const typeValue = executionTargetTypeField.findValueByName(
+                    executionTarget.type === 'GITLAB' ? 'GitLab' :
+                    executionTarget.type === 'GITHUB' ? 'GitHub' :
+                    'Manual'
+                );
+                if (typeValue) {
+                    issue.fields['Execution Target Type'] = typeValue;
+                } else {
+                    const newTypeValue = executionTargetTypeField.createValue(
+                        executionTarget.type === 'GITLAB' ? 'GitLab' :
+                        executionTarget.type === 'GITHUB' ? 'GitHub' :
+                        'Manual'
+                    );
+                    if (newTypeValue) {
+                        issue.fields['Execution Target Type'] = newTypeValue;
+                    }
+                }
+            }
+            
+            // Execution Target Reference
+            const executionTargetRefField = issue.project.findFieldByName('Execution Target Reference');
+            if (executionTargetRefField && executionTarget.ref) {
+                issue.fields['Execution Target Reference'] = executionTarget.ref;
+            }
+            
+            // Execution Target Name (if custom field exists)
+            const executionTargetNameField = issue.project.findFieldByName('Execution Target Name');
+            if (executionTargetNameField && executionTarget.name) {
+                issue.fields['Execution Target Name'] = executionTarget.name;
+            }
+            
+            // Test Suite
+            if (body.suiteID) {
+                const testSuiteField = issue.project.findFieldByName('Test Suite');
+                if (testSuiteField) {
+                    // Try to find suite by ID or name
+                    let suiteValue = testSuiteField.findValueByName(body.suiteID);
+                    if (!suiteValue) {
+                        // Try to get suite name from project extension properties
+                        try {
+                            const suitesJson = ytProject.extensionProperties.testSuites;
+                            if (suitesJson) {
+                                const suites = JSON.parse(suitesJson);
+                                const suite = suites.find((s: any) => s.id === body.suiteID);
+                                if (suite && suite.name) {
+                                    suiteValue = testSuiteField.findValueByName(suite.name);
+                                    if (!suiteValue) {
+                                        suiteValue = testSuiteField.createValue(suite.name);
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('[POST testRuns] Could not load suite name:', e);
+                        }
+                    }
+                    if (suiteValue) {
+                        issue.fields['Test Suite'] = suiteValue;
+                    }
+                }
+            }
         } catch (fieldError) {
-            console.warn('[POST testRuns] Could not set TMS Kind field:', fieldError);
+            console.warn('[POST testRuns] Could not set custom fields:', fieldError);
         }
 
         console.log('[POST testRuns] Created test run:', testRunId, 'issueId:', issue.idReadable || issue.id);
