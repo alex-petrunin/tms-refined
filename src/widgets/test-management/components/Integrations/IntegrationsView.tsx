@@ -2,6 +2,7 @@ import React, {memo, useState, useCallback, useMemo} from 'react';
 import Button from '@jetbrains/ring-ui-built/components/button/button';
 import Dialog from '@jetbrains/ring-ui-built/components/dialog/dialog';
 import {Header, Content} from '@jetbrains/ring-ui-built/components/island/island';
+import Panel from '@jetbrains/ring-ui-built/components/panel/panel';
 import Input from '@jetbrains/ring-ui-built/components/input/input';
 import Select from '@jetbrains/ring-ui-built/components/select/select';
 import Toggle from '@jetbrains/ring-ui-built/components/toggle/toggle';
@@ -81,6 +82,7 @@ export const IntegrationsView = memo<IntegrationsViewProps>(({projectId}) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<IntegrationType>('MANUAL');
   const [editingIntegration, setEditingIntegration] = useState<Integration | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Integration | null>(null);
   const [formData, setFormData] = useState<{
     name: string;
     type: Integration['type'];
@@ -170,15 +172,24 @@ export const IntegrationsView = memo<IntegrationsViewProps>(({projectId}) => {
     }
   }, [updateIntegration]);
 
-  const handleDelete = useCallback(async (integration: Integration) => {
-    if (confirm(`Are you sure you want to delete "${integration.name}"?`)) {
-      try {
-        await deleteIntegration(integration.id);
-      } catch (e: any) {
-        console.error('Failed to delete integration:', e);
-      }
+  const handleDeleteClick = useCallback((integration: Integration) => {
+    setConfirmDelete(integration);
+  }, []);
+
+  const handleCancelDelete = useCallback(() => {
+    setConfirmDelete(null);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!confirmDelete) return;
+    
+    try {
+      await deleteIntegration(confirmDelete.id);
+      setConfirmDelete(null);
+    } catch (e: any) {
+      console.error('Failed to delete integration:', e);
     }
-  }, [deleteIntegration]);
+  }, [confirmDelete, deleteIntegration]);
 
   const selectedType = INTEGRATION_TYPES.find(t => t.key === formData.type);
 
@@ -240,7 +251,7 @@ export const IntegrationsView = memo<IntegrationsViewProps>(({projectId}) => {
                       projectId={projectId}
                       onEdit={() => openEditDialog(integration)}
                       onToggle={() => handleToggleEnabled(integration)}
-                      onDelete={() => handleDelete(integration)}
+                      onDelete={() => handleDeleteClick(integration)}
                     />
                   ))
                 )}
@@ -254,12 +265,13 @@ export const IntegrationsView = memo<IntegrationsViewProps>(({projectId}) => {
         show={dialogOpen}
         onCloseAttempt={closeDialog}
         trapFocus
+        autoFocusFirst
       >
         <Header>
           {editingIntegration ? `Edit ${TYPE_CONFIGS[dialogType].label}` : `Add ${TYPE_CONFIGS[dialogType].label}`}
         </Header>
         <Content>
-          <form className="integration-form" onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+          <div className="">
             {formError && (
               <div className="error-message" style={{marginBottom: '16px'}}>
                 {formError}
@@ -292,7 +304,7 @@ export const IntegrationsView = memo<IntegrationsViewProps>(({projectId}) => {
 
             <div className="form-field form-field-toggle">
               <label>Enabled</label>
-              <div className="toggle-wrapper">
+              <div className="">
                 <Toggle
                   checked={formData.enabled}
                   onChange={() => setFormData({...formData, enabled: !formData.enabled})}
@@ -349,20 +361,40 @@ export const IntegrationsView = memo<IntegrationsViewProps>(({projectId}) => {
                 Use them to track test results entered directly in YouTrack.
               </div>
             )}
-
-            <div className="form-actions" style={{marginTop: '24px', display: 'flex', gap: '8px', justifyContent: 'flex-end'}}>
-              <Button onClick={closeDialog}>Cancel</Button>
-              <Button 
-                primary 
-                onClick={handleSave}
-                disabled={isCreating || isUpdating}
-              >
-                {isCreating || isUpdating ? 'Saving...' : 'Save'}
-              </Button>
-            </div>
-          </form>
+          </div>
         </Content>
+        <Panel>
+          <Button onClick={closeDialog}>Cancel</Button>
+          <Button 
+            primary 
+            onClick={handleSave}
+            disabled={isCreating || isUpdating}
+          >
+            {isCreating || isUpdating ? 'Saving...' : 'Save'}
+          </Button>
+        </Panel>
       </Dialog>
+
+      {confirmDelete && (
+        <Dialog
+          show={true}
+          onCloseAttempt={handleCancelDelete}
+          trapFocus
+          autoFocusFirst
+        >
+          <Header>Delete Integration</Header>
+          <Content>
+            <p>Are you sure you want to delete "{confirmDelete.name}"?</p>
+            <p>This action cannot be undone.</p>
+          </Content>
+          <Panel>
+            <Button onClick={handleCancelDelete}>Cancel</Button>
+            <Button danger onClick={handleConfirmDelete}>
+              Delete
+            </Button>
+          </Panel>
+        </Dialog>
+      )}
     </div>
   );
 });

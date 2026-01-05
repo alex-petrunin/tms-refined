@@ -409,10 +409,6 @@
   flex-wrap: wrap;
 }
 
-/* Integration form */
-.integration-form .form-field {
-  margin-bottom: calc(var(--ring-unit) * 2);
-}
 
 .integration-form .form-field label {
   display: block;
