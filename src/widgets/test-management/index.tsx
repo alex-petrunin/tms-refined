@@ -21,10 +21,13 @@ import ReactDOM from "react-dom/client";
 import "@jetbrains/ring-ui-built/components/style.css";
 import { App } from "./app";
 import {WidgetRootComponent} from "@/widgets/common/widget-root-component.tsx";
+import {AppStateContextProvider} from "./hooks/use-app-state";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <WidgetRootComponent>
-        <App />
+        <AppStateContextProvider>
+            <App />
+        </AppStateContextProvider>
     </WidgetRootComponent>,
 );
 

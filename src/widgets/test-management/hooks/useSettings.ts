@@ -34,10 +34,13 @@ export function useSettings(host: HostAPI): UseSettingsResult {
   } = useQuery<AppSettingsRes, Error>({
     queryKey: ['app-settings', 'global'],
     queryFn: async () => {
-      return (await host.fetchApp('global/settings', {
+      const res = await host.fetchApp('global/settings', {
         method: 'GET',
-        scope: false, // Global endpoints don't require entity context
-      })) as AppSettingsRes;
+        scope: false,
+      });
+
+      console.log('[useSettings] raw response:', res);
+      return res as AppSettingsRes;
     },
     enabled: Boolean(host),
     staleTime: 5 * 60 * 1000, // cache for 5 minutes (adjust as needed)

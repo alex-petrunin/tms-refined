@@ -20,6 +20,8 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
   const [search, setSearch] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  console.log(projectId);
   
   const {testSuites, total, loading, error, refetch} = useTestSuites({
     projectId,
