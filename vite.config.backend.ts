@@ -53,7 +53,36 @@ export default defineConfig({
             ],
             output: {
                 entryFileNames: '[name].js',
-                chunkFileNames: '[name].js'
+                chunkFileNames: '[name].js',
+                // Create shared chunks for backend modules to force require() statements
+                // This enables DDD patterns - the plugin will extract these require() statements
+                manualChunks: (id) => {
+                    // // Create shared chunks for backend infrastructure, application, and domain modules
+                    // if (id.includes('/backend/infrastructure/')) {
+                    //     return 'backend-infrastructure';
+                    // }
+                    // if (id.includes('/backend/application/')) {
+                    //     return 'backend-application';
+                    // }
+                    // if (id.includes('/backend/domain/')) {
+                    //     return 'backend-domain';
+                    // }
+                    // // Keep other modules in their entry points
+                    // return null;
+
+                    // Handler files (entry points) - don't chunk
+                    if (id.includes('/backend/router/')) {
+                        return null;
+                    }
+
+                    // Any other backend code - create shared chunks by top-level directory
+                    const backendMatch = id.match(/\/backend\/([^/]+)\//);
+                    if (backendMatch) {
+                        return `backend-${backendMatch[1]}`; // e.g., backend-infrastructure, backend-utils, backend-services
+                    }
+
+                    return null;
+                },
             }
         },
     },

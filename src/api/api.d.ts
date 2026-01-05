@@ -1,12 +1,13 @@
 import { ExtractRPCFromHandler } from "../backend/types/utility";
-import * as globalsettingsGETHandler from "../backend/router/global/settings/GET";
 import * as globaldemoGETHandler from "../backend/router/global/demo/GET";
+import * as globalsettingsGETHandler from "../backend/router/global/settings/GET";
 import * as globaltestCaseProjectGETHandler from "../backend/router/global/testCaseProject/GET";
 import * as projectdemoGETHandler from "../backend/router/project/demo/GET";
 import * as projectintegrationsDELETEHandler from "../backend/router/project/integrations/DELETE";
 import * as projectintegrationsGETHandler from "../backend/router/project/integrations/GET";
 import * as projectintegrationsPOSTHandler from "../backend/router/project/integrations/POST";
 import * as projectintegrationsPUTHandler from "../backend/router/project/integrations/PUT";
+import * as projectsettingsGETHandler from "../backend/router/project/settings/GET";
 import * as projecttestCasesGETHandler from "../backend/router/project/testCases/GET";
 import * as projecttestCasesPOSTHandler from "../backend/router/project/testCases/POST";
 import * as projecttestCasesPUTHandler from "../backend/router/project/testCases/PUT";
@@ -14,7 +15,6 @@ import * as projecttestSuitesDELETEHandler from "../backend/router/project/testS
 import * as projecttestSuitesGETHandler from "../backend/router/project/testSuites/GET";
 import * as projecttestSuitesPOSTHandler from "../backend/router/project/testSuites/POST";
 import * as projecttestSuitesPUTHandler from "../backend/router/project/testSuites/PUT";
-import * as projectsettingsGETHandler from "../backend/router/project/settings/GET";
 import * as projecttestRunsGETHandler from "../backend/router/project/testRuns/GET";
 import * as projecttestRunsPOSTHandler from "../backend/router/project/testRuns/POST";
 import * as globalwebhooksgitlabPOSTHandler from "../backend/router/global/webhooks/gitlab/POST";
@@ -23,11 +23,11 @@ import * as projecttestRunsresultsPOSTHandler from "../backend/router/project/te
 
 export type ApiRouter = {
     global: {
-    settings: {
-    GET: ExtractRPCFromHandler<globalsettingsGETHandler.Handle>;
-    };
     demo: {
     GET: ExtractRPCFromHandler<globaldemoGETHandler.Handle>;
+    };
+    settings: {
+    GET: ExtractRPCFromHandler<globalsettingsGETHandler.Handle>;
     };
     testCaseProject: {
     GET: ExtractRPCFromHandler<globaltestCaseProjectGETHandler.Handle>;
@@ -48,6 +48,9 @@ export type ApiRouter = {
     POST: ExtractRPCFromHandler<projectintegrationsPOSTHandler.Handle>;
     PUT: ExtractRPCFromHandler<projectintegrationsPUTHandler.Handle>;
     };
+    settings: {
+    GET: ExtractRPCFromHandler<projectsettingsGETHandler.Handle>;
+    };
     testCases: {
     GET: ExtractRPCFromHandler<projecttestCasesGETHandler.Handle>;
     POST: ExtractRPCFromHandler<projecttestCasesPOSTHandler.Handle>;
@@ -58,9 +61,6 @@ export type ApiRouter = {
     GET: ExtractRPCFromHandler<projecttestSuitesGETHandler.Handle>;
     POST: ExtractRPCFromHandler<projecttestSuitesPOSTHandler.Handle>;
     PUT: ExtractRPCFromHandler<projecttestSuitesPUTHandler.Handle>;
-    };
-    settings: {
-    GET: ExtractRPCFromHandler<projectsettingsGETHandler.Handle>;
     };
     testRuns: {
     GET: ExtractRPCFromHandler<projecttestRunsGETHandler.Handle>;
