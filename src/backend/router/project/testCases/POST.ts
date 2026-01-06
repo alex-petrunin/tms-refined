@@ -21,7 +21,6 @@ export type CreateTestCaseRes = {
 
 export default function handle(ctx: CtxPost<CreateTestCaseReq, CreateTestCaseRes>): void {
     const entities = require('@jetbrains/youtrack-scripting-api/entities');
-    const project = ctx.project;
     const body = ctx.request.json();
 
     // Validate required fields
@@ -33,7 +32,7 @@ export default function handle(ctx: CtxPost<CreateTestCaseReq, CreateTestCaseRes
 
     try {
         // Find the YouTrack project entity
-        const ytProject = entities.Project.findByKey(project.shortName || project.key);
+        const ytProject = entities.Project.findByKey(ctx.project.shortName || ctx.project.key);
         if (!ytProject) {
             ctx.response.code = 404;
             ctx.response.json({ error: 'Project not found' } as any);
@@ -70,7 +69,6 @@ export default function handle(ctx: CtxPost<CreateTestCaseReq, CreateTestCaseRes
         }
 
         // Set Test Suite custom field if suiteId provided
-        let suiteName: string | undefined;
         if (body.suiteId) {
             issue.extensionProperties.suiteId = body.suiteId;
             
@@ -81,14 +79,11 @@ export default function handle(ctx: CtxPost<CreateTestCaseReq, CreateTestCaseRes
                     const suites = JSON.parse(suitesJson);
                     const suite = suites.find((s: any) => s.id === body.suiteId);
                     if (suite) {
-                        suiteName = suite.name;
-                        
                         // Set Test Suite custom field
                         const testSuiteField = issue.project.findFieldByName('Test Suite');
                         if (testSuiteField) {
                             let testSuiteValue = testSuiteField.findValueByName(suite.name);
                             if (!testSuiteValue) {
-                                // Create new value if it doesn't exist
                                 testSuiteValue = testSuiteField.createValue(suite.name);
                             }
                             if (testSuiteValue) {

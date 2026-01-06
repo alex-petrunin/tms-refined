@@ -47,6 +47,19 @@ export const projectDemoResSchema = z.object({
   }),
 });
 
+export const settingsReqSchema = z.object({
+  projectId: z.string(),
+});
+
+export const settingsResSchema = z.object({
+  bugReportsProject: z.string().nullable(),
+  testRunsProject: z.string().nullable(),
+  testSuitFieldName: z.string().nullable(),
+  bugIssueCommand: z.string().nullable(),
+  customLinkType: z.string().nullable(),
+  isTestCaseProject: z.boolean(),
+});
+
 export const deleteIntegrationReqSchema = z.object({
   projectId: z.string(),
   id: z.string(),
@@ -159,17 +172,66 @@ export const updateIntegrationResSchema = z.object({
   }),
 });
 
-export const settingsReqSchema = z.object({
-  projectId: z.string(),
+export const getTestRunReqSchema = z.object({
+  projectId: z.string().optional(),
+  id: z.string().optional(),
+  limit: z.number().optional(),
+  offset: z.number().optional(),
+  suiteId: z.string().optional(),
+  status: z.string().optional(),
+  testCaseId: z.string().optional(),
 });
 
-export const settingsResSchema = z.object({
-  bugReportsProject: z.string().nullable(),
-  testRunsProject: z.string().nullable(),
-  testSuitFieldName: z.string().nullable(),
-  bugIssueCommand: z.string().nullable(),
-  customLinkType: z.string().nullable(),
-  isTestCaseProject: z.boolean(),
+export const getTestRunItemSchema = z.object({
+  id: z.string(),
+  testCaseIDs: z.array(z.string()),
+  testSuiteID: z.string(),
+  testSuiteName: z.string(),
+  status: z.string(),
+  executionTarget: z.object({
+    id: z.string(),
+    name: z.string(),
+    type: z.string(),
+    ref: z.string(),
+  }),
+});
+
+export const listTestRunsResSchema = z.object({
+  items: z.array(getTestRunItemSchema),
+  total: z.number(),
+});
+
+export const createTestRunReqSchema = z.object({
+  projectId: z.string(),
+  suiteID: z.string(),
+  testCaseIDs: z.array(z.string()),
+  executionMode: z
+    .union([z.literal("MANAGED"), z.literal("OBSERVED")])
+    .optional(),
+  executionTarget: z
+    .object({
+      id: z.string().optional(),
+      name: z.string().optional(),
+      type: z
+        .union([z.literal("GITLAB"), z.literal("GITHUB"), z.literal("MANUAL")])
+        .optional(),
+      ref: z.string().optional(),
+    })
+    .optional(),
+});
+
+export const createTestRunResSchema = z.object({
+  id: z.string(),
+  issueId: z.string(),
+  testCaseIDs: z.array(z.string()),
+  testSuiteID: z.string(),
+  status: z.string(),
+  executionTarget: z.object({
+    id: z.string(),
+    name: z.string(),
+    type: z.string(),
+    ref: z.string(),
+  }),
 });
 
 export const getTestCaseReqSchema = z.object({
@@ -284,71 +346,19 @@ export const updateTestSuiteResSchema = z.object({
   testCaseIDs: z.array(z.string()),
 });
 
-export const getTestRunReqSchema = z.object({
-  projectId: z.string().optional(),
-  id: z.string().optional(),
-  limit: z.number().optional(),
-  offset: z.number().optional(),
-  suiteId: z.string().optional(),
-  status: z.string().optional(),
-  testCaseId: z.string().optional(),
-});
-
-export const getTestRunItemSchema = z.object({
-  id: z.string(),
-  testCaseIDs: z.array(z.string()),
-  testSuiteID: z.string(),
-  testSuiteName: z.string(),
-  status: z.string(),
-  executionTarget: z.object({
-    id: z.string(),
-    name: z.string(),
-    type: z.string(),
-    ref: z.string(),
-  }),
-});
-
-export const listTestRunsResSchema = z.object({
-  items: z.array(getTestRunItemSchema),
-  total: z.number(),
-});
-
-export const createTestRunReqSchema = z.object({
-  projectId: z.string(),
-  suiteID: z.string(),
-  testCaseIDs: z.array(z.string()),
-  executionMode: z
-    .union([z.literal("MANAGED"), z.literal("OBSERVED")])
-    .optional(),
-  executionTarget: z
-    .object({
-      id: z.string().optional(),
-      name: z.string().optional(),
-      type: z
-        .union([z.literal("GITLAB"), z.literal("GITHUB"), z.literal("MANUAL")])
-        .optional(),
-      ref: z.string().optional(),
-    })
-    .optional(),
-});
-
-export const createTestRunResSchema = z.object({
-  id: z.string(),
-  issueId: z.string(),
-  testCaseIDs: z.array(z.string()),
-  testSuiteID: z.string(),
-  status: z.string(),
-  executionTarget: z.object({
-    id: z.string(),
-    name: z.string(),
-    type: z.string(),
-    ref: z.string(),
-  }),
-});
-
 export const gitLabWebhookReqSchema = z.object({});
 
 export const gitLabWebhookResSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+});
+
+export const testRunResultReqSchema = z.object({
+  testRunID: z.string(),
+  passed: z.boolean(),
+});
+
+export const testRunResultResSchema = z.object({
   success: z.boolean(),
   message: z.string().optional(),
 });
@@ -379,16 +389,6 @@ export const tMSQueryResSchema = z.object({
         .optional(),
     }),
   ),
-});
-
-export const testRunResultReqSchema = z.object({
-  testRunID: z.string(),
-  passed: z.boolean(),
-});
-
-export const testRunResultResSchema = z.object({
-  success: z.boolean(),
-  message: z.string().optional(),
 });
 
 // Nested schema object for validation system
@@ -425,6 +425,12 @@ export const schema = {
         Res: projectDemoResSchema
       }
     },
+    settings: {
+      GET: {
+        Req: settingsReqSchema,
+        Res: settingsResSchema
+      }
+    },
     integrations: {
       DELETE: {
         Req: deleteIntegrationReqSchema,
@@ -443,10 +449,20 @@ export const schema = {
         Res: updateIntegrationResSchema
       }
     },
-    settings: {
+    testRuns: {
       GET: {
-        Req: settingsReqSchema,
-        Res: settingsResSchema
+        Req: getTestRunReqSchema,
+        Res: listTestRunsResSchema
+      },
+      POST: {
+        Req: createTestRunReqSchema,
+        Res: createTestRunResSchema
+      },
+      results: {
+        POST: {
+          Req: testRunResultReqSchema,
+          Res: testRunResultResSchema
+        }
       }
     },
     testCases: {
@@ -479,22 +495,6 @@ export const schema = {
       PUT: {
         Req: updateTestSuiteReqSchema,
         Res: updateTestSuiteResSchema
-      }
-    },
-    testRuns: {
-      GET: {
-        Req: getTestRunReqSchema,
-        Res: listTestRunsResSchema
-      },
-      POST: {
-        Req: createTestRunReqSchema,
-        Res: createTestRunResSchema
-      },
-      results: {
-        POST: {
-          Req: testRunResultReqSchema,
-          Res: testRunResultResSchema
-        }
       }
     },
     tms: {

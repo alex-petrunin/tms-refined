@@ -1,3 +1,7 @@
+import { UpdateTestSuiteMetadataUseCase } from "@backend/application/usecases/UpdateTestSuiteMetadata";
+import { UpdateTestSuiteCompositionUseCase } from "@backend/application/usecases/UpdateTestSuiteComposition";
+import { YouTrackTestSuiteRepository } from "@backend/infrastructure/adapters/YouTrackTestSuiteRepository";
+
 /**
  * @zod-to-schema
  */
@@ -20,90 +24,77 @@ export type UpdateTestSuiteRes = {
 };
 
 export default function handle(ctx: CtxPut<UpdateTestSuiteReq, UpdateTestSuiteRes>): void {
-    const entities = require('@jetbrains/youtrack-scripting-api/entities');
-    const project = ctx.project;
     const body = ctx.request.json();
 
-    // Get test suite ID from request body
-    const testSuiteId = body.id;
-
-    if (!testSuiteId) {
+    if (!body.id) {
         ctx.response.code = 400;
         ctx.response.json({ error: 'Test suite ID is required' } as any);
         return;
     }
 
     try {
-        // Find the YouTrack project entity for writing
-        const ytProject = entities.Project.findByKey(project.shortName || project.key);
+        // Verify project exists
+        const entities = require('@jetbrains/youtrack-scripting-api/entities');
+        const ytProject = entities.Project.findByKey(ctx.project.shortName || ctx.project.key);
         if (!ytProject) {
             ctx.response.code = 404;
             ctx.response.json({ error: 'Project not found' } as any);
             return;
         }
 
-        // Load existing test suites from project extension properties
-        let suites: Array<{id: string; name: string; description: string; testCaseIDs: string[]}> = [];
-        const extProps = ytProject.extensionProperties || {};
-        const suitesJson = extProps.testSuites;
-        
-        if (suitesJson && typeof suitesJson === 'string') {
-            try {
-                suites = JSON.parse(suitesJson);
-            } catch (e) {
-                console.error("Failed to parse existing suites:", e);
-            }
-        }
-        
-        // Find the test suite to update
-        const suiteIndex = suites.findIndex(s => s.id === testSuiteId);
-        
-        if (suiteIndex === -1) {
+        // Initialize repository
+        const repository = new YouTrackTestSuiteRepository(ctx.project);
+
+        // Get existing test suite to track name changes
+        const existingSuite = repository.findByID(body.id);
+        if (!existingSuite) {
             ctx.response.code = 404;
             ctx.response.json({ error: 'Test suite not found' } as any);
             return;
         }
 
-        // Update fields if provided
-        const suite = suites[suiteIndex];
-        const oldName = suite.name;
-        
-        if (body.name !== undefined) {
-            suite.name = body.name;
-        }
-        if (body.description !== undefined) {
-            suite.description = body.description;
-        }
-        if (body.testCaseIDs !== undefined) {
-            suite.testCaseIDs = body.testCaseIDs;
-        }
+        let updatedSuite = existingSuite;
 
-        // If name changed, update the custom field value
-        if (body.name !== undefined && body.name !== oldName) {
-            try {
-                const testSuiteField = ytProject.findFieldByName('Test Suite');
-                if (testSuiteField) {
-                    // Create new value with new name if it doesn't exist
-                    const existingNewValue = testSuiteField.findValueByName(body.name);
-                    if (!existingNewValue && testSuiteField.createValue) {
-                        testSuiteField.createValue(body.name);
+        // Update metadata if name or description provided
+        if (body.name !== undefined || body.description !== undefined) {
+            const metadataUseCase = new UpdateTestSuiteMetadataUseCase(repository);
+            updatedSuite = metadataUseCase.execute({
+                testSuiteID: body.id,
+                name: body.name,
+                description: body.description
+            });
+
+            // Update custom field value if name changed
+            if (body.name !== undefined && body.name !== existingSuite.name) {
+                try {
+                    const testSuiteField = ytProject.findFieldByName('Test Suite');
+                    if (testSuiteField) {
+                        const existingNewValue = testSuiteField.findValueByName(body.name);
+                        if (!existingNewValue && testSuiteField.createValue) {
+                            testSuiteField.createValue(body.name);
+                        }
                     }
-                    // Note: We don't delete the old value as other items might reference it
+                } catch (fieldError) {
+                    console.error("Failed to update Test Suite custom field value:", fieldError);
                 }
-            } catch (fieldError) {
-                console.error("Failed to update Test Suite custom field value:", fieldError);
             }
         }
 
-        // Save updated test suites to project extension properties
-        ytProject.extensionProperties.testSuites = JSON.stringify(suites);
+        // Update composition if testCaseIDs provided
+        if (body.testCaseIDs !== undefined) {
+            const compositionUseCase = new UpdateTestSuiteCompositionUseCase(repository);
+            updatedSuite = compositionUseCase.execute({
+                testSuiteID: body.id,
+                testCaseIDs: body.testCaseIDs
+            });
+        }
 
-        // Return the updated test suite
+        // Map to response
         const response: UpdateTestSuiteRes = {
-            id: suite.id,
-            name: suite.name,
-            description: suite.description,
-            testCaseIDs: suite.testCaseIDs
+            id: updatedSuite.id,
+            name: updatedSuite.name,
+            description: updatedSuite.description,
+            testCaseIDs: updatedSuite.testCaseIDs
         };
 
         ctx.response.json(response);

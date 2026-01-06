@@ -1,3 +1,6 @@
+import { CreateTestSuiteUseCase } from "@backend/application/usecases/CreateTestSuite";
+import { YouTrackTestSuiteRepository } from "@backend/infrastructure/adapters/YouTrackTestSuiteRepository";
+
 /**
  * @zod-to-schema
  */
@@ -18,8 +21,6 @@ export type CreateTestSuiteRes = {
 };
 
 export default function handle(ctx: CtxPost<CreateTestSuiteReq, CreateTestSuiteRes>): void {
-    const entities = require('@jetbrains/youtrack-scripting-api/entities');
-    const project = ctx.project;
     const body = ctx.request.json();
 
     // Validate required fields
@@ -30,68 +31,44 @@ export default function handle(ctx: CtxPost<CreateTestSuiteReq, CreateTestSuiteR
     }
 
     try {
-        // Find the YouTrack project entity for writing
-        const ytProject = entities.Project.findByKey(project.shortName || project.key);
+        // Verify project exists
+        const entities = require('@jetbrains/youtrack-scripting-api/entities');
+        const ytProject = entities.Project.findByKey(ctx.project.shortName || ctx.project.key);
         if (!ytProject) {
             ctx.response.code = 404;
             ctx.response.json({ error: 'Project not found' } as any);
             return;
         }
 
-        // Load existing test suites from project extension properties
-        let suites: Array<{id: string; name: string; description: string; testCaseIDs: string[]}> = [];
-        const extProps = ytProject.extensionProperties || {};
-        const suitesJson = extProps.testSuites;
-        
-        if (suitesJson && typeof suitesJson === 'string') {
-            try {
-                suites = JSON.parse(suitesJson);
-            } catch (e) {
-                console.error("Failed to parse existing suites:", e);
-            }
-        }
+        // Initialize repository and use case
+        const repository = new YouTrackTestSuiteRepository(ctx.project);
+        const useCase = new CreateTestSuiteUseCase(repository);
 
-        // Generate unique ID for the test suite
-        const timestamp = Date.now().toString(36);
-        const random = Math.random().toString(36).substring(2, 8);
-        const testSuiteId = `ts_${timestamp}_${random}`;
-
-        // Create new test suite object
-        const newTestSuite = {
-            id: testSuiteId,
+        // Execute use case
+        const testSuite = useCase.execute({
             name: body.name,
-            description: body.description || '',
-            testCaseIDs: [] as string[]
-        };
+            description: body.description
+        });
 
-        // Add to suites array
-        suites.push(newTestSuite);
-
-        // Save to project extension properties
-        ytProject.extensionProperties.testSuites = JSON.stringify(suites);
-
-        // Also create a custom field value for the "Test Suite" enum field
-        // This allows test cases to reference this suite via a dropdown
+        // Create custom field value for dropdown (optional)
         try {
             const testSuiteField = ytProject.findFieldByName('Test Suite');
             if (testSuiteField && testSuiteField.createValue) {
-                // Check if value already exists
                 const existingValue = testSuiteField.findValueByName(body.name);
                 if (!existingValue) {
                     testSuiteField.createValue(body.name);
                 }
             }
         } catch (fieldError) {
-            // Custom field creation is optional - don't fail the whole operation
             console.error("Failed to create Test Suite custom field value:", fieldError);
         }
 
-        // Return the created test suite
+        // Map to response
         const response: CreateTestSuiteRes = {
-            id: newTestSuite.id,
-            name: newTestSuite.name,
-            description: newTestSuite.description,
-            testCaseIDs: newTestSuite.testCaseIDs
+            id: testSuite.id,
+            name: testSuite.name,
+            description: testSuite.description,
+            testCaseIDs: testSuite.testCaseIDs
         };
 
         ctx.response.json(response);

@@ -1,6 +1,6 @@
-import {Project} from "@/api/youtrack-types";
-import { HandleExecutionResultUseCase } from "@/backend/application/usecases/HandleExecutionResult";
-import { InMemoryTestRunRepository } from "@/backend/infrastructure/inMemory/InMemoryTestRunRepository";
+import { Project } from "@/api/youtrack-types";
+import { HandleExecutionResultUseCase } from "@backend/application/usecases/HandleExecutionResult";
+import { YouTrackTestRunRepository } from "@backend/infrastructure/adapters/YouTrackTestRunRepository";
 
 /**
  * @zod-to-schema
@@ -18,8 +18,11 @@ export type TestRunResultRes = {
     message?: string;
 };
 
+/**
+ * Handle test run execution results.
+ * Uses DDD approach with HandleExecutionResultUseCase and YouTrackTestRunRepository.
+ */
 export default function handle(ctx: CtxPost<TestRunResultReq, TestRunResultRes>): void {
-    const project = ctx.project as Project;
     const body = ctx.request.json();
 
     // Validate required fields
@@ -41,28 +44,42 @@ export default function handle(ctx: CtxPost<TestRunResultReq, TestRunResultRes>)
         return;
     }
 
-    // Instantiate repository and use case
-    const repository = new InMemoryTestRunRepository();
-    const handleExecutionResultUseCase = new HandleExecutionResultUseCase(repository);
+    try {
+        // Initialize repository with YouTrack context
+        const repository = new YouTrackTestRunRepository(
+            ctx.project as Project,
+            ctx.settings,
+            undefined, // appHost not available in HTTP handlers
+            undefined  // globalStorage not available in HTTP handlers
+        );
 
-    // Execute use case
-    handleExecutionResultUseCase.execute({
-        testRunID: body.testRunID,
-        passed: body.passed
-    }).then(() => {
-        const response: TestRunResultRes = {
-            success: true,
-            message: 'Test run result processed successfully'
-        };
+        // Initialize and execute use case
+        const useCase = new HandleExecutionResultUseCase(repository);
 
-        ctx.response.json(response);
-    }).catch((error) => {
+        // Execute use case (async)
+        useCase.execute({
+            testRunID: body.testRunID,
+            passed: body.passed
+        }).then(() => {
+            const response: TestRunResultRes = {
+                success: true,
+                message: 'Test run result processed successfully'
+            };
+            ctx.response.json(response);
+        }).catch((error: any) => {
+            ctx.response.code = 500;
+            ctx.response.json({ 
+                success: false,
+                message: error.message || 'Failed to process test run result' 
+            } as any);
+        });
+    } catch (error: any) {
         ctx.response.code = 500;
         ctx.response.json({ 
             success: false,
-            message: error.message || 'Failed to process test run result' 
+            message: error.message || 'Failed to initialize test run handler' 
         } as any);
-    });
+    }
 }
 
 export type Handle = typeof handle;
