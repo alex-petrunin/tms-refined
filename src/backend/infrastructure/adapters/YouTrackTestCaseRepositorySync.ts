@@ -95,7 +95,11 @@ export class YouTrackTestCaseRepositorySync implements TestCaseRepositorySync {
         const testCases: TestCase[] = [];
         for (const issue of issuesArray) {
             const extProps = issue.extensionProperties || {};
-            if (extProps.testCaseId) {
+            // An issue is a test case if it has:
+            // 1. testCaseId extension property, OR
+            // 2. testCaseSummary extension property (legacy marker), OR
+            // 3. suiteId extension property (associated with a suite)
+            if (extProps.testCaseId || extProps.testCaseSummary || extProps.suiteId) {
                 testCases.push(this.mapIssueToTestCase(issue));
             }
         }

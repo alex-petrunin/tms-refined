@@ -31,6 +31,17 @@ export default function handle(ctx: CtxPost<CreateTestCaseReq, CreateTestCaseRes
     const findIssueByTestCaseId = (testCaseId: string, project: any): any => {
         const entities = require('@jetbrains/youtrack-scripting-api/entities');
         
+        // Try to find by issue ID first (testCaseId is now the actual issue ID like "TEST-123")
+        try {
+            const issue = entities.Issue.findById(testCaseId);
+            if (issue) {
+                return issue;
+            }
+        } catch (e) {
+            // Not found by ID, try extension property (legacy/fallback)
+        }
+        
+        // Fallback: search by extension property
         try {
             const issues = entities.Issue.findByExtensionProperties({
                 testCaseId: testCaseId
@@ -40,7 +51,7 @@ export default function handle(ctx: CtxPost<CreateTestCaseReq, CreateTestCaseRes
                 return Array.from(issues)[0];
             }
         } catch (e) {
-            // Fallback: search manually
+            // Fallback: manual search
             const search = require('@jetbrains/youtrack-scripting-api/search');
             const allIssues = search.search(project, '') || [];
             const issuesArray: any[] = [];
@@ -61,11 +72,16 @@ export default function handle(ctx: CtxPost<CreateTestCaseReq, CreateTestCaseRes
 
     // Helper: Associate test case with suite (YouTrack-specific infrastructure)
     const associateWithSuite = (ytProject: any, issue: any, testCaseId: string, suiteId: string): void => {
-        if (!issue) return;
+        if (!issue) {
+            console.warn('[POST testCases] associateWithSuite: issue is null/undefined');
+            return;
+        }
         
         try {
             // Set extension property
+            console.log('[POST testCases] Setting suiteId:', suiteId, 'on issue:', issue.idReadable || issue.id);
             issue.extensionProperties.suiteId = suiteId;
+            console.log('[POST testCases] suiteId set. Verifying:', issue.extensionProperties.suiteId);
             
             // Find suite name from project extension properties
             const suitesJson = ytProject.extensionProperties.testSuites;
@@ -139,7 +155,11 @@ export default function handle(ctx: CtxPost<CreateTestCaseReq, CreateTestCaseRes
 
         // Handle suite association (infrastructure concern)
         if (body.suiteId) {
+            console.log('[POST testCases] Associating test case', testCaseId, 'with suite', body.suiteId);
             associateWithSuite(ytProject, issue, testCaseId, body.suiteId);
+            console.log('[POST testCases] Association complete. Final suiteId:', issue.extensionProperties.suiteId);
+        } else {
+            console.log('[POST testCases] No suiteId provided in request body');
         }
 
         // Map to response directly from input data (we just created it)

@@ -33,6 +33,17 @@ export default function handle(ctx: CtxPut<UpdateTestCaseReq, UpdateTestCaseRes>
     const findIssueByTestCaseId = (testCaseId: string, project: any): any => {
         const entities = require('@jetbrains/youtrack-scripting-api/entities');
         
+        // Try to find by issue ID first (testCaseId is now the actual issue ID like "TEST-123")
+        try {
+            const issue = entities.Issue.findById(testCaseId);
+            if (issue) {
+                return issue;
+            }
+        } catch (e) {
+            // Not found by ID, try extension property (legacy/fallback)
+        }
+        
+        // Fallback: search by extension property
         try {
             const issues = entities.Issue.findByExtensionProperties({
                 testCaseId: testCaseId
@@ -42,7 +53,7 @@ export default function handle(ctx: CtxPut<UpdateTestCaseReq, UpdateTestCaseRes>
                 return Array.from(issues)[0];
             }
         } catch (e) {
-            // Fallback: search manually
+            // Fallback: manual search
             const search = require('@jetbrains/youtrack-scripting-api/search');
             const allIssues = search.search(project, '') || [];
             const issuesArray: any[] = [];

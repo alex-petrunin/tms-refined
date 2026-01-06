@@ -120,16 +120,20 @@ export const RunTestCasesDialog = memo<RunTestCasesDialogProps>(({projectId, onC
     const api = createApi(host);
     setLoadingTestCases(true);
     
+    console.log('[RunTestCasesDialog] Fetching test cases for suite:', selectedSuite.key, 'projectId:', projectId);
+    
     api.project.testCases.GET({projectId, suiteId: selectedSuite.key, limit: 100} as any)
       .then((response: any) => {
+        console.log('[RunTestCasesDialog] Test cases response:', response);
         const options: TestCaseOption[] = (response.items || []).map((tc: any) => ({
           key: tc.id,
           label: tc.summary
         }));
+        console.log('[RunTestCasesDialog] Mapped test case options:', options.length, 'items');
         setTestCaseOptions(options);
       })
       .catch((err) => {
-        console.error('Failed to load test cases:', err);
+        console.error('[RunTestCasesDialog] Failed to load test cases:', err);
       })
       .finally(() => setLoadingTestCases(false));
   }, [host, projectId, selectedSuite]);

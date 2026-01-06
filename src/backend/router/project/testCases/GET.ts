@@ -40,6 +40,17 @@ export default function handle(ctx: CtxGet<GetTestCaseRes, GetTestCaseReq>): voi
     const findIssueByTestCaseId = (testCaseId: string, project: any): any => {
         const entities = require('@jetbrains/youtrack-scripting-api/entities');
         
+        // Try to find by issue ID first (testCaseId is now the actual issue ID like "TEST-123")
+        try {
+            const issue = entities.Issue.findById(testCaseId);
+            if (issue) {
+                return issue;
+            }
+        } catch (e) {
+            // Not found by ID, try extension property (legacy/fallback)
+        }
+        
+        // Fallback: search by extension property
         try {
             const issues = entities.Issue.findByExtensionProperties({
                 testCaseId: testCaseId
@@ -49,7 +60,7 @@ export default function handle(ctx: CtxGet<GetTestCaseRes, GetTestCaseReq>): voi
                 return Array.from(issues)[0];
             }
         } catch (e) {
-            // Fallback: search manually
+            // Fallback: manual search
             const search = require('@jetbrains/youtrack-scripting-api/search');
             const allIssues = search.search(project, '') || [];
             const issuesArray: any[] = [];
@@ -91,7 +102,7 @@ export default function handle(ctx: CtxGet<GetTestCaseRes, GetTestCaseReq>): voi
             suiteId: getParam('suiteId')
         };
         
-        console.log('[GET testCases] Query params - id:', query.id, 'suiteId:', query.suiteId);
+        console.log('[GET testCases] Query params - id:', query.id, 'suiteId:', query.suiteId, 'search:', query.search);
 
         try {
         // Verify project exists
@@ -130,27 +141,37 @@ export default function handle(ctx: CtxGet<GetTestCaseRes, GetTestCaseReq>): voi
             // Get all test cases and filter
             const allTestCases = repository.findAll();
             
-            console.log('[GET testCases] Found', allTestCases.length, 'test cases');
+            console.log('[GET testCases] Found', allTestCases.length, 'total test cases');
+            if (query.suiteId) {
+                console.log('[GET testCases] Filtering for suiteId:', query.suiteId);
+            }
             
             // Map to response items with issue data
             testCases = allTestCases
                 .map(testCase => {
-                    console.log('[GET testCases] Mapping test case:', testCase.id, 'summary:', testCase.summary);
                     const issue = findIssueByTestCaseId(testCase.id, ytProject);
+                    const suiteIdFromIssue = issue?.extensionProperties?.suiteId;
                     const mapped = {
                         id: testCase.id,
                         issueId: issue?.idReadable || issue?.id || '',
                         summary: testCase.summary || '',
                         description: testCase.description || '',
-                        suiteId: issue?.extensionProperties?.suiteId
+                        suiteId: suiteIdFromIssue
                     };
-                    console.log('[GET testCases] Mapped to:', JSON.stringify(mapped));
+                    console.log('[GET testCases] Mapping test case:', testCase.id, 
+                               'summary:', testCase.summary, 
+                               'suiteId from issue:', suiteIdFromIssue,
+                               'issue ID:', issue?.idReadable || issue?.id);
                     return mapped;
                 })
                 .filter(item => {
                     // Filter by suiteId if provided
-                    if (query.suiteId && item.suiteId !== query.suiteId) {
-                        return false;
+                    if (query.suiteId) {
+                        if (item.suiteId !== query.suiteId) {
+                            console.log('[GET testCases] Filtering out:', item.id, 'suiteId:', item.suiteId, 'expected:', query.suiteId);
+                            return false;
+                        }
+                        console.log('[GET testCases] Keeping:', item.id, 'suiteId:', item.suiteId);
                     }
                     // Filter by search if provided
                     if (query.search) {
