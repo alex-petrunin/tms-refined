@@ -4,8 +4,8 @@ import {TestSuiteID} from "../../domain/entities/TestSuite";
 import {ExecutionTriggerPort} from "../ports/ExecutionTriggerPort";
 import {TestRunRepository, IdempotencyKey} from "../ports/TestRunRepository";
 import {ExecutionTargetResolverPort} from "../ports/ExecutionTargetResolverPort";
-import {ExecutionTargetSnapshot} from "@backend/domain/valueObjects/ExecutionTarget.ts";
-import {ExecutionModeType} from "@backend/domain/valueObjects/ExecutionMode.ts";
+import {ExecutionTargetSnapshot} from "../../domain/valueObjects/ExecutionTarget";
+import {ExecutionModeType} from "../../domain/valueObjects/ExecutionMode";
 
 export interface RunTestCasesInput {
     suiteID: TestSuiteID;

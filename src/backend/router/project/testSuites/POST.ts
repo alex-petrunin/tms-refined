@@ -1,5 +1,5 @@
-import { CreateTestSuiteUseCase } from "@backend/application/usecases/CreateTestSuite";
-import { YouTrackTestSuiteRepository } from "@backend/infrastructure/adapters/YouTrackTestSuiteRepository";
+import { CreateTestSuiteUseCase } from "../../../application/usecases/CreateTestSuite";
+import { YouTrackTestSuiteRepository } from "../../../infrastructure/adapters/YouTrackTestSuiteRepository";
 
 /**
  * @zod-to-schema

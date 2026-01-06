@@ -1,4 +1,4 @@
-import { YouTrackTestSuiteRepository } from "@backend/infrastructure/adapters/YouTrackTestSuiteRepository";
+import { YouTrackTestSuiteRepository } from "../../../infrastructure/adapters/YouTrackTestSuiteRepository";
 
 /**
  * @zod-to-schema

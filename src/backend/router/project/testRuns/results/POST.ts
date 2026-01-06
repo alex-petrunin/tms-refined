@@ -1,6 +1,6 @@
 import { Project } from "@/api/youtrack-types";
-import { HandleExecutionResultUseCase } from "@backend/application/usecases/HandleExecutionResult";
-import { YouTrackTestRunRepository } from "@backend/infrastructure/adapters/YouTrackTestRunRepository";
+import { HandleExecutionResultUseCase } from "../../../../application/usecases/HandleExecutionResult";
+import { YouTrackTestRunRepository } from "../../../../infrastructure/adapters/YouTrackTestRunRepository";
 
 /**
  * @zod-to-schema

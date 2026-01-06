@@ -1,6 +1,6 @@
-import { UpdateTestSuiteMetadataUseCase } from "@backend/application/usecases/UpdateTestSuiteMetadata";
-import { UpdateTestSuiteCompositionUseCase } from "@backend/application/usecases/UpdateTestSuiteComposition";
-import { YouTrackTestSuiteRepository } from "@backend/infrastructure/adapters/YouTrackTestSuiteRepository";
+import { UpdateTestSuiteMetadataUseCase } from "../../../application/usecases/UpdateTestSuiteMetadata";
+import { UpdateTestSuiteCompositionUseCase } from "../../../application/usecases/UpdateTestSuiteComposition";
+import { YouTrackTestSuiteRepository } from "../../../infrastructure/adapters/YouTrackTestSuiteRepository";
 
 /**
  * @zod-to-schema

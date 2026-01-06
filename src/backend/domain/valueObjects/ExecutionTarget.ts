@@ -1,4 +1,4 @@
-import {ExecutionTargetType} from "@backend/domain/enums/ExecutionTargetType.ts";
+import {ExecutionTargetType} from "../enums/ExecutionTargetType";
 
 export type ExecutionTargetID = string;
 

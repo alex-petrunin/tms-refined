@@ -1,3 +1,5 @@
+import { YouTrackTestRunRepositorySync } from "../../../infrastructure/adapters/YouTrackTestRunRepositorySync";
+
 /**
  * @zod-to-schema
  */
@@ -36,10 +38,12 @@ export type ListTestRunsRes = {
     total: number;
 };
 
+/**
+ * Get Test Runs Handler - DDD Approach
+ * Uses YouTrackTestRunRepositorySync
+ */
 export default function handle(ctx: CtxGet<ListTestRunsRes, GetTestRunReq>): void {
     const entities = require('@jetbrains/youtrack-scripting-api/entities');
-    const search = require('@jetbrains/youtrack-scripting-api/search');
-    const project = ctx.project;
 
     // Get query params using getParameter
     const getParam = (name: string): string | undefined => {
@@ -67,16 +71,12 @@ export default function handle(ctx: CtxGet<ListTestRunsRes, GetTestRunReq>): voi
         let targetProjectKey: string;
         
         if (testRunProjects) {
-            // Extract project key from settings (can be shortName, key, or id)
             targetProjectKey = testRunProjects.shortName || testRunProjects.key || testRunProjects.id;
+        } else {
+            targetProjectKey = ctx.project.shortName || ctx.project.key || '';
         }
         
-        // Fallback to current project if no test runs project configured
-        if (!targetProjectKey) {
-            targetProjectKey = project.shortName || project.key || '';
-        }
-        
-        // Find the YouTrack project entity for test runs
+        // Verify project exists
         const ytProject = entities.Project.findByKey(targetProjectKey);
         if (!ytProject) {
             ctx.response.code = 404;
@@ -84,11 +84,10 @@ export default function handle(ctx: CtxGet<ListTestRunsRes, GetTestRunReq>): voi
             return;
         }
 
-        // Load suites to resolve names - try to load from current project (where suites are stored)
+        // Load suites to resolve names
         let suiteMap: Record<string, string> = {};
         try {
-            // Suites are stored in the current project (test suites project), not test runs project
-            const currentProject = entities.Project.findByKey(project.shortName || project.key);
+            const currentProject = entities.Project.findByKey(ctx.project.shortName || ctx.project.key);
             if (currentProject) {
                 const suitesJson = currentProject.extensionProperties.testSuites;
                 if (suitesJson && typeof suitesJson === 'string') {
@@ -102,94 +101,67 @@ export default function handle(ctx: CtxGet<ListTestRunsRes, GetTestRunReq>): voi
             console.warn('[GET testRuns] Failed to load suites for name resolution:', e);
         }
 
-        // Search for all issues in the test runs project
-        const allIssues = search.search(ytProject, '') || [];
+        // Initialize repository
+        const repository = new YouTrackTestRunRepositorySync(targetProjectKey, ctx.currentUser);
 
-        // Convert to array if needed (YouTrack returns a Set)
-        const issuesArray: any[] = [];
-        if (allIssues && typeof allIssues.forEach === 'function') {
-            allIssues.forEach((issue: any) => {
-                issuesArray.push(issue);
-            });
-        } else if (Array.isArray(allIssues)) {
-            issuesArray.push(...allIssues);
-        }
-
-        // Filter to only test runs (issues with testRunId extension property)
-        const testRuns: GetTestRunItem[] = [];
-
-        for (let i = 0; i < issuesArray.length && i < 1000; i++) {
-            const issue = issuesArray[i];
-            if (!issue) continue;
-
-            const extProps = issue.extensionProperties || {};
-            const testRunId = extProps.testRunId;
-
-            // Skip issues that are not test runs
-            if (!testRunId) {
-                continue;
-            }
-
-            // Filter by specific id if provided
-            if (query.id && testRunId !== query.id) {
-                continue;
-            }
-
-            // Filter by suiteId if provided
-            const suiteId = extProps.testSuiteId || '';
-            if (query.suiteId && suiteId !== query.suiteId) {
-                continue;
-            }
-
-            // Filter by status if provided
-            const status = extProps.testRunStatus || 'PENDING';
-            if (query.status && status !== query.status) {
-                continue;
-            }
-
-            // Parse test case IDs from comma-separated string
-            const testCaseIdsStr = extProps.testCaseIds || '';
-            const testCaseIDs = testCaseIdsStr
-                ? testCaseIdsStr.split(',').map((id: string) => id.trim()).filter(Boolean)
-                : [];
-
-            // Filter by testCaseId if provided
-            if (query.testCaseId && !testCaseIDs.includes(query.testCaseId)) {
-                continue;
-            }
-
-            // Resolve suite name
-            const suiteName = suiteMap[suiteId] || suiteId;
-
-            testRuns.push({
-                id: testRunId,
-                testCaseIDs: testCaseIDs,
-                testSuiteID: suiteId,
-                testSuiteName: suiteName,
-                status: status,
-                executionTarget: {
-                    id: extProps.executionTargetId || '',
-                    name: extProps.executionTargetName || 'Manual',
-                    type: extProps.executionTargetType || 'MANUAL',
-                    ref: extProps.executionTargetRef || ''
-                }
-            });
-        }
-
-        // If single ID was requested, return that item
+        // Get test runs based on query
+        let testRuns: GetTestRunItem[];
+        
         if (query.id) {
-            if (testRuns.length === 0) {
+            // Get specific test run
+            const testRun = repository.findById(query.id);
+            if (!testRun) {
                 ctx.response.code = 404;
                 ctx.response.json({ error: `Test run not found: ${query.id}` } as any);
                 return;
             }
-            // Return as list format for consistency
-            const response: ListTestRunsRes = {
-                items: testRuns,
-                total: 1
-            };
-            ctx.response.json(response);
-            return;
+            
+            testRuns = [{
+                id: testRun.id,
+                testCaseIDs: testRun.testCaseIDs,
+                testSuiteID: testRun.testSuiteID,
+                testSuiteName: suiteMap[testRun.testSuiteID] || testRun.testSuiteID,
+                status: testRun.status,
+                executionTarget: {
+                    id: testRun.executionTarget.id,
+                    name: testRun.executionTarget.name,
+                    type: testRun.executionTarget.type,
+                    ref: testRun.executionTarget.ref
+                }
+            }];
+        } else {
+            // Get all test runs and filter
+            const allTestRuns = repository.findAll();
+            
+            testRuns = allTestRuns
+                .filter(testRun => {
+                    // Filter by suiteId if provided
+                    if (query.suiteId && testRun.testSuiteID !== query.suiteId) {
+                        return false;
+                    }
+                    // Filter by status if provided
+                    if (query.status && testRun.status !== query.status) {
+                        return false;
+                    }
+                    // Filter by testCaseId if provided
+                    if (query.testCaseId && !testRun.testCaseIDs.includes(query.testCaseId)) {
+                        return false;
+                    }
+                    return true;
+                })
+                .map(testRun => ({
+                    id: testRun.id,
+                    testCaseIDs: testRun.testCaseIDs,
+                    testSuiteID: testRun.testSuiteID,
+                    testSuiteName: suiteMap[testRun.testSuiteID] || testRun.testSuiteID,
+                    status: testRun.status,
+                    executionTarget: {
+                        id: testRun.executionTarget.id,
+                        name: testRun.executionTarget.name,
+                        type: testRun.executionTarget.type,
+                        ref: testRun.executionTarget.ref
+                    }
+                }));
         }
 
         // Calculate total before pagination

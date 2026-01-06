@@ -1,6 +1,6 @@
 import { TestCaseID } from "./TestCase";
 import { TestSuiteID } from "./TestSuite";
-import {ExecutionTargetSnapshot} from "@backend/domain/valueObjects/ExecutionTarget.ts";
+import {ExecutionTargetSnapshot} from "../valueObjects/ExecutionTarget";
 
 export type TestRunID = string;
 

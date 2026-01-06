@@ -3,13 +3,9 @@ import * as globaldemoGETHandler from "../backend/router/global/demo/GET";
 import * as globalsettingsGETHandler from "../backend/router/global/settings/GET";
 import * as globaltestCaseProjectGETHandler from "../backend/router/global/testCaseProject/GET";
 import * as projectdemoGETHandler from "../backend/router/project/demo/GET";
-import * as projectsettingsGETHandler from "../backend/router/project/settings/GET";
-import * as projectintegrationsDELETEHandler from "../backend/router/project/integrations/DELETE";
-import * as projectintegrationsGETHandler from "../backend/router/project/integrations/GET";
-import * as projectintegrationsPOSTHandler from "../backend/router/project/integrations/POST";
-import * as projectintegrationsPUTHandler from "../backend/router/project/integrations/PUT";
 import * as projecttestRunsGETHandler from "../backend/router/project/testRuns/GET";
 import * as projecttestRunsPOSTHandler from "../backend/router/project/testRuns/POST";
+import * as projectsettingsGETHandler from "../backend/router/project/settings/GET";
 import * as projecttestCasesGETHandler from "../backend/router/project/testCases/GET";
 import * as projecttestCasesPOSTHandler from "../backend/router/project/testCases/POST";
 import * as projecttestCasesPUTHandler from "../backend/router/project/testCases/PUT";
@@ -17,6 +13,10 @@ import * as projecttestSuitesDELETEHandler from "../backend/router/project/testS
 import * as projecttestSuitesGETHandler from "../backend/router/project/testSuites/GET";
 import * as projecttestSuitesPOSTHandler from "../backend/router/project/testSuites/POST";
 import * as projecttestSuitesPUTHandler from "../backend/router/project/testSuites/PUT";
+import * as projectintegrationsDELETEHandler from "../backend/router/project/integrations/DELETE";
+import * as projectintegrationsGETHandler from "../backend/router/project/integrations/GET";
+import * as projectintegrationsPOSTHandler from "../backend/router/project/integrations/POST";
+import * as projectintegrationsPUTHandler from "../backend/router/project/integrations/PUT";
 import * as globalwebhooksgitlabPOSTHandler from "../backend/router/global/webhooks/gitlab/POST";
 import * as projecttmsqueryPOSTHandler from "../backend/router/project/tms/query/POST";
 import * as projecttestRunsresultsPOSTHandler from "../backend/router/project/testRuns/results/POST";
@@ -42,21 +42,15 @@ export type ApiRouter = {
     demo: {
     GET: ExtractRPCFromHandler<projectdemoGETHandler.Handle>;
     };
-    settings: {
-    GET: ExtractRPCFromHandler<projectsettingsGETHandler.Handle>;
-    };
-    integrations: {
-    DELETE: ExtractRPCFromHandler<projectintegrationsDELETEHandler.Handle>;
-    GET: ExtractRPCFromHandler<projectintegrationsGETHandler.Handle>;
-    POST: ExtractRPCFromHandler<projectintegrationsPOSTHandler.Handle>;
-    PUT: ExtractRPCFromHandler<projectintegrationsPUTHandler.Handle>;
-    };
     testRuns: {
     GET: ExtractRPCFromHandler<projecttestRunsGETHandler.Handle>;
     POST: ExtractRPCFromHandler<projecttestRunsPOSTHandler.Handle>;
     results: {
     POST: ExtractRPCFromHandler<projecttestRunsresultsPOSTHandler.Handle>;
     };
+    };
+    settings: {
+    GET: ExtractRPCFromHandler<projectsettingsGETHandler.Handle>;
     };
     testCases: {
     GET: ExtractRPCFromHandler<projecttestCasesGETHandler.Handle>;
@@ -68,6 +62,12 @@ export type ApiRouter = {
     GET: ExtractRPCFromHandler<projecttestSuitesGETHandler.Handle>;
     POST: ExtractRPCFromHandler<projecttestSuitesPOSTHandler.Handle>;
     PUT: ExtractRPCFromHandler<projecttestSuitesPUTHandler.Handle>;
+    };
+    integrations: {
+    DELETE: ExtractRPCFromHandler<projectintegrationsDELETEHandler.Handle>;
+    GET: ExtractRPCFromHandler<projectintegrationsGETHandler.Handle>;
+    POST: ExtractRPCFromHandler<projectintegrationsPOSTHandler.Handle>;
+    PUT: ExtractRPCFromHandler<projectintegrationsPUTHandler.Handle>;
     };
     tms: {
     query: {

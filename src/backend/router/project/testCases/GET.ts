@@ -1,3 +1,5 @@
+import { YouTrackTestCaseRepositorySync } from "../../../infrastructure/adapters/YouTrackTestCaseRepositorySync";
+
 /**
  * @zod-to-schema
  */
@@ -29,115 +31,171 @@ export type GetTestCaseRes = {
     total: number;
 };
 
+/**
+ * Get Test Cases Handler - DDD Approach
+ * Uses YouTrackTestCaseRepositorySync
+ */
 export default function handle(ctx: CtxGet<GetTestCaseRes, GetTestCaseReq>): void {
-    const entities = require('@jetbrains/youtrack-scripting-api/entities');
-    const search = require('@jetbrains/youtrack-scripting-api/search');
-    const project = ctx.project;
-    
-    // Get query params using getParameter (YouTrack HTTP handler API)
-    const getParam = (name: string): string | undefined => {
-        if (ctx.request.getParameter) {
-            const val = ctx.request.getParameter(name);
-            return val || undefined;
+    // Helper: Find issue by test case ID
+    const findIssueByTestCaseId = (testCaseId: string, project: any): any => {
+        const entities = require('@jetbrains/youtrack-scripting-api/entities');
+        
+        try {
+            const issues = entities.Issue.findByExtensionProperties({
+                testCaseId: testCaseId
+            });
+            
+            if (issues && issues.size > 0) {
+                return Array.from(issues)[0];
+            }
+        } catch (e) {
+            // Fallback: search manually
+            const search = require('@jetbrains/youtrack-scripting-api/search');
+            const allIssues = search.search(project, '') || [];
+            const issuesArray: any[] = [];
+            if (allIssues && typeof allIssues.forEach === 'function') {
+                allIssues.forEach((issue: any) => issuesArray.push(issue));
+            }
+            
+            for (const issue of issuesArray) {
+                const extProps = issue.extensionProperties || {};
+                if (extProps.testCaseId === testCaseId) {
+                    return issue;
+                }
+            }
         }
-        return undefined;
+        
+        return null;
     };
     
-    const query = {
-        id: getParam('id'),
-        projectId: getParam('projectId'),
-        limit: getParam('limit') ? Number(getParam('limit')) : undefined,
-        offset: getParam('offset') ? Number(getParam('offset')) : undefined,
-        search: getParam('search'),
-        suiteId: getParam('suiteId')
-    };
-    
-    // Debug logging
-    console.log('[GET testCases] Query params - id:', query.id, 'suiteId:', query.suiteId);
-
     try {
-        // Find the YouTrack project entity
-        const ytProject = entities.Project.findByKey(project.shortName || project.key);
+        console.log('[GET testCases] Handler called');
+        
+        const entities = require('@jetbrains/youtrack-scripting-api/entities');
+        
+        // Get query params using getParameter (YouTrack HTTP handler API)
+        const getParam = (name: string): string | undefined => {
+            if (ctx.request.getParameter) {
+                const val = ctx.request.getParameter(name);
+                return val || undefined;
+            }
+            return undefined;
+        };
+        
+        const query = {
+            id: getParam('id'),
+            projectId: getParam('projectId'),
+            limit: getParam('limit') ? Number(getParam('limit')) : 50,
+            offset: getParam('offset') ? Number(getParam('offset')) : 0,
+            search: getParam('search'),
+            suiteId: getParam('suiteId')
+        };
+        
+        console.log('[GET testCases] Query params - id:', query.id, 'suiteId:', query.suiteId);
+
+        try {
+        // Verify project exists
+        const projectKey = ctx.project.shortName || ctx.project.key;
+        const ytProject = entities.Project.findByKey(projectKey);
         if (!ytProject) {
             ctx.response.code = 404;
             ctx.response.json({ error: 'Project not found' } as any);
             return;
         }
 
-        // Search for all issues in the project
-        let searchQuery = '';
-        if (query.search) {
-            searchQuery = query.search;
-        }
-        
-        const allIssues = search.search(ytProject, searchQuery) || [];
-        
-        // Convert to array if needed (YouTrack returns a Set)
-        const issuesArray: any[] = [];
-        if (allIssues && typeof allIssues.forEach === 'function') {
-            allIssues.forEach((issue: any) => {
-                issuesArray.push(issue);
-            });
-        } else if (Array.isArray(allIssues)) {
-            issuesArray.push(...allIssues);
-        }
+        // Initialize repository
+        const repository = new YouTrackTestCaseRepositorySync(projectKey, ctx.currentUser);
 
-        // Filter to only test cases (issues with testCaseId extension property)
-        const testCases: TestCaseItem[] = [];
+        // Get test cases based on query
+        let testCases: TestCaseItem[];
         
-        for (let i = 0; i < issuesArray.length && i < 1000; i++) {
-            const issue = issuesArray[i];
-            if (!issue) continue;
-            
-            const extProps = issue.extensionProperties || {};
-            const testCaseId = extProps.testCaseId;
-            
-            // Skip issues that are not test cases
-            if (!testCaseId) {
-                continue;
+        if (query.id) {
+            // Get specific test case
+            const testCase = repository.findByID(query.id);
+            if (!testCase) {
+                ctx.response.code = 404;
+                ctx.response.json({ error: `Test case not found: ${query.id}` } as any);
+                return;
             }
             
-            // Filter by specific id if provided
-            const filterById = query.id;
-            if (filterById && testCaseId !== filterById) {
-                console.log('[GET testCases] Skipping', testCaseId, 'does not match filter', filterById);
-                continue;
-            }
+            const issue = findIssueByTestCaseId(query.id, ytProject);
+            testCases = [{
+                id: testCase.id,
+                issueId: issue?.idReadable || issue?.id,
+                summary: testCase.summary,
+                description: testCase.description,
+                suiteId: issue?.extensionProperties?.suiteId
+            }];
+        } else {
+            // Get all test cases and filter
+            const allTestCases = repository.findAll();
             
-            // Filter by suiteId if provided
-            const suiteId = extProps.suiteId;
-            const filterBySuiteId = query.suiteId;
-            if (filterBySuiteId && suiteId !== filterBySuiteId) {
-                continue;
-            }
+            console.log('[GET testCases] Found', allTestCases.length, 'test cases');
             
-            console.log('[GET testCases] Including test case:', testCaseId);
-            testCases.push({
-                id: testCaseId,
-                issueId: issue.idReadable || issue.id,
-                summary: issue.summary || '',
-                description: issue.description || '',
-                suiteId: suiteId || undefined
-            });
+            // Map to response items with issue data
+            testCases = allTestCases
+                .map(testCase => {
+                    console.log('[GET testCases] Mapping test case:', testCase.id, 'summary:', testCase.summary);
+                    const issue = findIssueByTestCaseId(testCase.id, ytProject);
+                    const mapped = {
+                        id: testCase.id,
+                        issueId: issue?.idReadable || issue?.id || '',
+                        summary: testCase.summary || '',
+                        description: testCase.description || '',
+                        suiteId: issue?.extensionProperties?.suiteId
+                    };
+                    console.log('[GET testCases] Mapped to:', JSON.stringify(mapped));
+                    return mapped;
+                })
+                .filter(item => {
+                    // Filter by suiteId if provided
+                    if (query.suiteId && item.suiteId !== query.suiteId) {
+                        return false;
+                    }
+                    // Filter by search if provided
+                    if (query.search) {
+                        const searchLower = query.search.toLowerCase();
+                        return item.summary.toLowerCase().includes(searchLower) ||
+                               item.description.toLowerCase().includes(searchLower);
+                    }
+                    return true;
+                });
+            
+            console.log('[GET testCases] After filtering:', testCases.length, 'test cases');
         }
 
         // Calculate total before pagination
         const total = testCases.length;
 
         // Apply pagination
-        const offset = query.offset || 0;
-        const limit = query.limit || 50;
-        const paginatedItems = testCases.slice(offset, offset + limit);
+        const paginatedItems = testCases.slice(query.offset, query.offset + query.limit);
 
         const response: GetTestCaseRes = {
             items: paginatedItems,
             total: total
         };
 
+        console.log('[GET testCases] Returning response with', response.items.length, 'items, total:', response.total);
+        console.log('[GET testCases] First item:', response.items[0] ? JSON.stringify(response.items[0]) : 'none');
+
         ctx.response.json(response);
-    } catch (error: any) {
+        } catch (innerError: any) {
+            console.error('[GET testCases] Inner error:', innerError);
+            console.error('[GET testCases] Error message:', innerError?.message);
+            console.error('[GET testCases] Error stack:', innerError?.stack);
+            ctx.response.code = 500;
+            ctx.response.json({ error: innerError?.message || `Failed to fetch test cases: ${innerError}` } as any);
+        }
+    } catch (outerError: any) {
+        console.error('[GET testCases] Outer error (handler initialization):', outerError);
+        console.error('[GET testCases] Error message:', outerError?.message);
+        console.error('[GET testCases] Error stack:', outerError?.stack);
         ctx.response.code = 500;
-        ctx.response.json({ error: error.message || `Failed to fetch test cases: ${error}` } as any);
+        ctx.response.json({ 
+            error: outerError?.message || 'Handler initialization failed',
+            items: [],
+            total: 0
+        } as any);
     }
 }
 

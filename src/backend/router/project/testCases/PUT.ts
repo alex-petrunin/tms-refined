@@ -1,3 +1,6 @@
+import { UpdateTestCaseSyncUseCase } from "../../../application/usecases/UpdateTestCaseSync";
+import { YouTrackTestCaseRepositorySync } from "../../../infrastructure/adapters/YouTrackTestCaseRepositorySync";
+
 /**
  * @zod-to-schema
  */
@@ -21,10 +24,111 @@ export type UpdateTestCaseRes = {
     suiteId?: string;
 };
 
+/**
+ * Update Test Case Handler - DDD Approach
+ * Uses UpdateTestCaseSyncUseCase and YouTrackTestCaseRepositorySync
+ */
 export default function handle(ctx: CtxPut<UpdateTestCaseReq, UpdateTestCaseRes>): void {
-    const entities = require('@jetbrains/youtrack-scripting-api/entities');
-    const search = require('@jetbrains/youtrack-scripting-api/search');
-    const project = ctx.project;
+    // Helper: Find issue by test case ID
+    const findIssueByTestCaseId = (testCaseId: string, project: any): any => {
+        const entities = require('@jetbrains/youtrack-scripting-api/entities');
+        
+        try {
+            const issues = entities.Issue.findByExtensionProperties({
+                testCaseId: testCaseId
+            });
+            
+            if (issues && issues.size > 0) {
+                return Array.from(issues)[0];
+            }
+        } catch (e) {
+            // Fallback: search manually
+            const search = require('@jetbrains/youtrack-scripting-api/search');
+            const allIssues = search.search(project, '') || [];
+            const issuesArray: any[] = [];
+            if (allIssues && typeof allIssues.forEach === 'function') {
+                allIssues.forEach((issue: any) => issuesArray.push(issue));
+            }
+            
+            for (const issue of issuesArray) {
+                const extProps = issue.extensionProperties || {};
+                if (extProps.testCaseId === testCaseId) {
+                    return issue;
+                }
+            }
+        }
+        
+        return null;
+    };
+
+    // Helper: Update suite association (YouTrack-specific infrastructure)
+    const updateSuiteAssociation = (
+        ytProject: any,
+        issue: any,
+        testCaseId: string,
+        oldSuiteId: string | undefined,
+        newSuiteId: string | undefined
+    ): void => {
+    try {
+        // Update extension property
+        issue.extensionProperties.suiteId = newSuiteId || '';
+
+        const suitesJson = ytProject.extensionProperties.testSuites;
+        if (suitesJson) {
+            const suites = JSON.parse(suitesJson);
+            
+            // Remove from old suite's testCaseIDs
+            if (oldSuiteId) {
+                const oldSuite = suites.find((s: any) => s.id === oldSuiteId);
+                if (oldSuite && oldSuite.testCaseIDs) {
+                    oldSuite.testCaseIDs = oldSuite.testCaseIDs.filter((id: string) => id !== testCaseId);
+                }
+            }
+            
+            // Add to new suite's testCaseIDs and update custom field
+            if (newSuiteId) {
+                const newSuite = suites.find((s: any) => s.id === newSuiteId);
+                if (newSuite) {
+                    if (!newSuite.testCaseIDs) {
+                        newSuite.testCaseIDs = [];
+                    }
+                    if (!newSuite.testCaseIDs.includes(testCaseId)) {
+                        newSuite.testCaseIDs.push(testCaseId);
+                    }
+                    
+                    // Update Test Suite custom field
+                    try {
+                        const testSuiteField = issue.project.findFieldByName('Test Suite');
+                        if (testSuiteField) {
+                            let testSuiteValue = testSuiteField.findValueByName(newSuite.name);
+                            if (!testSuiteValue) {
+                                testSuiteValue = testSuiteField.createValue(newSuite.name);
+                            }
+                            if (testSuiteValue) {
+                                issue.fields['Test Suite'] = testSuiteValue;
+                            }
+                        }
+                    } catch (fieldError) {
+                        console.warn('Could not update Test Suite field:', fieldError);
+                    }
+                }
+            } else {
+                // Clear Test Suite custom field
+                try {
+                    issue.fields['Test Suite'] = null;
+                } catch (fieldError) {
+                    console.warn('Could not clear Test Suite field:', fieldError);
+                }
+            }
+            
+            // Save updated suites
+            ytProject.extensionProperties.testSuites = JSON.stringify(suites);
+        }
+    } catch (suiteError) {
+        console.warn('Could not update suite references:', suiteError);
+    }
+    };
+
     const body = ctx.request.json();
 
     // Validate required fields
@@ -35,137 +139,45 @@ export default function handle(ctx: CtxPut<UpdateTestCaseReq, UpdateTestCaseRes>
     }
 
     try {
-        // Find the YouTrack project entity
-        const ytProject = entities.Project.findByKey(project.shortName || project.key);
+        // Verify project exists
+        const entities = require('@jetbrains/youtrack-scripting-api/entities');
+        const projectKey = ctx.project.shortName || ctx.project.key;
+        const ytProject = entities.Project.findByKey(projectKey);
         if (!ytProject) {
             ctx.response.code = 404;
             ctx.response.json({ error: 'Project not found' } as any);
             return;
         }
 
-        // Search for the issue with matching testCaseId extension property
-        const allIssues = search.search(ytProject, '') || [];
-        
-        // Convert to array if needed
-        const issuesArray: any[] = [];
-        if (allIssues && typeof allIssues.forEach === 'function') {
-            allIssues.forEach((issue: any) => {
-                issuesArray.push(issue);
-            });
-        } else if (Array.isArray(allIssues)) {
-            issuesArray.push(...allIssues);
+        // Initialize repository and use case
+        const repository = new YouTrackTestCaseRepositorySync(projectKey, ctx.currentUser);
+        const useCase = new UpdateTestCaseSyncUseCase(repository);
+
+        // Execute use case to update test case
+        // Note: We don't pre-check existence because the test case might not be searchable yet
+        // The use case will handle creating if it doesn't exist
+        const updatedTestCase = useCase.execute({
+            testCaseID: body.id,
+            summary: body.summary,
+            description: body.description
+        });
+
+        // Find the issue for suite management and getting issue ID
+        const issue = findIssueByTestCaseId(body.id, ytProject);
+
+        // Handle suite change if requested (infrastructure concern)
+        const oldSuiteId = issue?.extensionProperties?.suiteId;
+        if ('suiteId' in body && body.suiteId !== oldSuiteId && issue) {
+            updateSuiteAssociation(ytProject, issue, body.id, oldSuiteId, body.suiteId);
         }
 
-        // Find the issue with matching testCaseId
-        let issueToUpdate = null;
-        let youtrackIssueId: string | null = null;
-        
-        for (let i = 0; i < issuesArray.length && i < 1000; i++) {
-            const issue = issuesArray[i];
-            if (!issue) continue;
-            
-            const extProps = issue.extensionProperties || {};
-            if (extProps.testCaseId === body.id) {
-                // Found the matching issue - get a fresh reference using internal ID
-                youtrackIssueId = issue.idReadable || issue.id;
-                const internalId = issue.id;
-                issueToUpdate = entities.Issue.findById(internalId);
-                
-                // If findById failed, use the original reference
-                if (!issueToUpdate) {
-                    issueToUpdate = issue;
-                }
-                break;
-            }
-        }
-
-        if (!issueToUpdate) {
-            ctx.response.code = 404;
-            ctx.response.json({ error: `Test case not found: ${body.id}` } as any);
-            return;
-        }
-
-        // Store old values before update
-        const oldSuiteId = issueToUpdate.extensionProperties.suiteId;
-        const testCaseId = body.id;
-
-        // Update issue fields - only if explicitly provided
-        if (body.summary !== undefined && body.summary !== null) {
-            issueToUpdate.summary = body.summary;
-        }
-        if (body.description !== undefined && body.description !== null) {
-            issueToUpdate.description = body.description;
-        }
-
-        // Handle suite change - only if suiteId is explicitly in the request
-        if ('suiteId' in body && body.suiteId !== oldSuiteId) {
-            // Update extension property
-            issueToUpdate.extensionProperties.suiteId = body.suiteId || '';
-
-            try {
-                const suitesJson = ytProject.extensionProperties.testSuites;
-                if (suitesJson) {
-                    const suites = JSON.parse(suitesJson);
-                    
-                    // Remove from old suite's testCaseIDs
-                    if (oldSuiteId) {
-                        const oldSuite = suites.find((s: any) => s.id === oldSuiteId);
-                        if (oldSuite && oldSuite.testCaseIDs) {
-                            oldSuite.testCaseIDs = oldSuite.testCaseIDs.filter((id: string) => id !== testCaseId);
-                        }
-                    }
-                    
-                    // Add to new suite's testCaseIDs and update custom field
-                    if (body.suiteId) {
-                        const newSuite = suites.find((s: any) => s.id === body.suiteId);
-                        if (newSuite) {
-                            if (!newSuite.testCaseIDs) {
-                                newSuite.testCaseIDs = [];
-                            }
-                            if (!newSuite.testCaseIDs.includes(testCaseId)) {
-                                newSuite.testCaseIDs.push(testCaseId);
-                            }
-                            
-                            // Update Test Suite custom field
-                            try {
-                                const testSuiteField = issueToUpdate.project.findFieldByName('Test Suite');
-                                if (testSuiteField) {
-                                    let testSuiteValue = testSuiteField.findValueByName(newSuite.name);
-                                    if (!testSuiteValue) {
-                                        testSuiteValue = testSuiteField.createValue(newSuite.name);
-                                    }
-                                    if (testSuiteValue) {
-                                        issueToUpdate.fields['Test Suite'] = testSuiteValue;
-                                    }
-                                }
-                            } catch (fieldError) {
-                                console.warn('Could not update Test Suite field:', fieldError);
-                            }
-                        }
-                    } else {
-                        // Clear Test Suite custom field
-                        try {
-                            issueToUpdate.fields['Test Suite'] = null;
-                        } catch (fieldError) {
-                            console.warn('Could not clear Test Suite field:', fieldError);
-                        }
-                    }
-                    
-                    // Save updated suites
-                    ytProject.extensionProperties.testSuites = JSON.stringify(suites);
-                }
-            } catch (suiteError) {
-                console.warn('Could not update suite references:', suiteError);
-            }
-        }
-
-        // Return the updated test case
+        // Map to response
         const response: UpdateTestCaseRes = {
-            id: testCaseId,
-            issueId: issueToUpdate.idReadable || youtrackIssueId || '',
-            summary: issueToUpdate.summary || '',
-            description: issueToUpdate.description || '',
-            suiteId: issueToUpdate.extensionProperties.suiteId || undefined
+            id: body.id,
+            issueId: issue?.idReadable || issue?.id || '',
+            summary: updatedTestCase.summary,
+            description: updatedTestCase.description,
+            suiteId: issue?.extensionProperties?.suiteId || body.suiteId
         };
 
         ctx.response.json(response);
