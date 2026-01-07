@@ -164,7 +164,6 @@ export class YouTrackTestRunRepositorySync implements TestRunRepositorySync {
         }
         
         // Look up suite name from TEST CASE project (not test run project)
-        console.log('[TestRun createIssue] Looking up suite name for ID:', testRun.testSuiteID);
         let suiteName = testRun.testSuiteID; // Fallback to ID
         try {
             // Look in test case project, not test run project
@@ -173,21 +172,15 @@ export class YouTrackTestRunRepositorySync implements TestRunRepositorySync {
                 : project; // Fallback to current project
             
             const suitesJson = testCaseProject?.extensionProperties?.testSuites;
-            console.log('[TestRun createIssue] Looking in project:', this.testCaseProjectKey || project.key);
-            console.log('[TestRun createIssue] suitesJson:', suitesJson ? 'found' : 'not found');
             if (suitesJson && typeof suitesJson === 'string') {
                 const suites = JSON.parse(suitesJson);
-                console.log('[TestRun createIssue] Parsed suites:', suites.length, 'items');
                 const suite = suites.find((s: any) => s.id === testRun.testSuiteID);
                 if (suite && suite.name) {
                     suiteName = suite.name;
-                    console.log('[TestRun createIssue] Found suite name:', suiteName);
-                } else {
-                    console.warn('[TestRun createIssue] Suite not found in array');
                 }
             }
         } catch (e) {
-            console.error('[TestRun createIssue] Failed to look up suite name for summary:', e);
+            console.warn('[TestRun] Failed to look up suite name:', e);
         }
         
         console.log('[TestRun createIssue] Creating issue with summary containing suite name:', suiteName);
@@ -215,10 +208,16 @@ export class YouTrackTestRunRepositorySync implements TestRunRepositorySync {
     }
 
     private updateIssue(issue: any, testRun: TestRun): void {
-        // Look up suite name
+        const entities = require('@jetbrains/youtrack-scripting-api/entities');
+        
+        // Look up suite name from test case project
         let suiteName = testRun.testSuiteID; // Fallback to ID
         try {
-            const suitesJson = issue.project.extensionProperties.testSuites;
+            const testCaseProject = this.testCaseProjectKey 
+                ? entities.Project.findByKey(this.testCaseProjectKey)
+                : issue.project;
+            
+            const suitesJson = testCaseProject?.extensionProperties?.testSuites;
             if (suitesJson && typeof suitesJson === 'string') {
                 const suites = JSON.parse(suitesJson);
                 const suite = suites.find((s: any) => s.id === testRun.testSuiteID);
@@ -297,32 +296,16 @@ export class YouTrackTestRunRepositorySync implements TestRunRepositorySync {
             // Link test run to test case issues using YouTrack commands
             // This creates proper issue relationships across projects
             if (testRun.testCaseIDs && testRun.testCaseIDs.length > 0) {
-                console.log('[TestRun setCustomFields] Creating links to', testRun.testCaseIDs.length, 'test cases');
                 testRun.testCaseIDs.forEach((testCaseId: string) => {
                     try {
-                        console.log('[TestRun setCustomFields] Attempting to link to:', testCaseId);
-                        // testCaseId is now the actual issue ID (e.g., "DEM-67")
                         const testCaseIssue = entities.Issue.findById(testCaseId);
-                        console.log('[TestRun setCustomFields] Test case issue found:', testCaseIssue ? 'yes' : 'no');
-                        
                         if (testCaseIssue) {
-                            console.log('[TestRun setCustomFields] Test case issue ID:', testCaseIssue.id);
-                            console.log('[TestRun setCustomFields] Current user:', this.currentUser ? this.currentUser.login : 'null');
-                            
                             // Apply command with currentUser (required!)
                             const command = `relates to ${testCaseId}`;
-                            console.log('[TestRun setCustomFields] Applying command:', command);
                             issue.applyCommand(command, this.currentUser);
-                            console.log('[TestRun setCustomFields] Successfully linked to test case:', testCaseId);
-                        } else {
-                            console.warn('[TestRun setCustomFields] Test case issue not found:', testCaseId);
                         }
                     } catch (linkError: any) {
-                        console.error('[TestRun setCustomFields] Failed to link to test case:', testCaseId);
-                        console.error('[TestRun setCustomFields] Error type:', typeof linkError);
-                        console.error('[TestRun setCustomFields] Error message:', linkError?.message || 'no message');
-                        console.error('[TestRun setCustomFields] Error toString:', linkError?.toString ? linkError.toString() : 'no toString');
-                        console.error('[TestRun setCustomFields] Error keys:', linkError ? Object.keys(linkError) : 'null');
+                        console.warn('[TestRun] Failed to link to test case:', testCaseId, linkError?.message);
                     }
                 });
             }

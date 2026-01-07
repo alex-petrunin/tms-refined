@@ -55,23 +55,18 @@ export const TestCaseForm = memo<TestCaseFormProps>(({caseId, projectId, onClose
   useEffect(() => {
     if (!caseId || !host || !projectId) return;
     
-    console.log('[TestCaseForm] Loading test case:', caseId);
     const api = createApi(host);
     setLoading(true);
     
     api.project.testCases.GET({projectId, id: caseId} as any)
       .then((response: any) => {
-        console.log('[TestCaseForm] Response for caseId', caseId, ':', response);
         // Response is { items: [...], total: number }
         const testCase = response.items?.[0];
         if (testCase) {
-          console.log('[TestCaseForm] Loading data from test case:', testCase.id, testCase.summary);
           setSummary(testCase.summary || '');
           setDescription(testCase.description || '');
           setSuiteId(testCase.suiteId || null);
           setIssueId(testCase.issueId || null);
-        } else {
-          console.warn('[TestCaseForm] No test case found in response for id:', caseId);
         }
       })
       .catch((err) => setError(err instanceof Error ? err : new Error('Failed to load test case')))

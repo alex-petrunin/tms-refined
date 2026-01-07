@@ -72,16 +72,11 @@ export default function handle(ctx: CtxPost<CreateTestCaseReq, CreateTestCaseRes
 
     // Helper: Associate test case with suite (YouTrack-specific infrastructure)
     const associateWithSuite = (ytProject: any, issue: any, testCaseId: string, suiteId: string): void => {
-        if (!issue) {
-            console.warn('[POST testCases] associateWithSuite: issue is null/undefined');
-            return;
-        }
+        if (!issue) return;
         
         try {
             // Set extension property
-            console.log('[POST testCases] Setting suiteId:', suiteId, 'on issue:', issue.idReadable || issue.id);
             issue.extensionProperties.suiteId = suiteId;
-            console.log('[POST testCases] suiteId set. Verifying:', issue.extensionProperties.suiteId);
             
             // Find suite name from project extension properties
             const suitesJson = ytProject.extensionProperties.testSuites;
@@ -114,8 +109,6 @@ export default function handle(ctx: CtxPost<CreateTestCaseReq, CreateTestCaseRes
     };
 
     try {
-        console.log('[POST testCases] Handler called');
-        
         const body = ctx.request.json();
 
         // Validate required fields
@@ -155,11 +148,7 @@ export default function handle(ctx: CtxPost<CreateTestCaseReq, CreateTestCaseRes
 
         // Handle suite association (infrastructure concern)
         if (body.suiteId) {
-            console.log('[POST testCases] Associating test case', testCaseId, 'with suite', body.suiteId);
             associateWithSuite(ytProject, issue, testCaseId, body.suiteId);
-            console.log('[POST testCases] Association complete. Final suiteId:', issue.extensionProperties.suiteId);
-        } else {
-            console.log('[POST testCases] No suiteId provided in request body');
         }
 
         // Map to response directly from input data (we just created it)
@@ -175,16 +164,10 @@ export default function handle(ctx: CtxPost<CreateTestCaseReq, CreateTestCaseRes
 
         ctx.response.json(response);
         } catch (innerError: any) {
-            console.error('[POST testCases] Inner error:', innerError);
-            console.error('[POST testCases] Error message:', innerError?.message);
-            console.error('[POST testCases] Error stack:', innerError?.stack);
             ctx.response.code = 500;
-            ctx.response.json({ error: innerError?.message || `Failed to create test case: ${innerError}` } as any);
+            ctx.response.json({ error: innerError?.message || 'Failed to create test case' } as any);
         }
     } catch (outerError: any) {
-        console.error('[POST testCases] Outer error (handler initialization):', outerError);
-        console.error('[POST testCases] Error message:', outerError?.message);
-        console.error('[POST testCases] Error stack:', outerError?.stack);
         ctx.response.code = 500;
         ctx.response.json({ error: outerError?.message || 'Handler initialization failed' } as any);
     }

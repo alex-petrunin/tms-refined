@@ -138,7 +138,6 @@ export default function handle(ctx: CtxPost<CreateTestRunReq, CreateTestRunRes>)
             throw new Error('Failed to retrieve created issue from repository');
         }
 
-        console.log('[POST testRuns] Created test run:', testRunId, 'issueId:', issue?.idReadable || issue?.id);
 
         // Map to response directly from input data (we just created it)
         const response: CreateTestRunRes = {

@@ -80,8 +80,6 @@ export default function handle(ctx: CtxGet<GetTestCaseRes, GetTestCaseReq>): voi
     };
     
     try {
-        console.log('[GET testCases] Handler called');
-        
         const entities = require('@jetbrains/youtrack-scripting-api/entities');
         
         // Get query params using getParameter (YouTrack HTTP handler API)
@@ -102,7 +100,6 @@ export default function handle(ctx: CtxGet<GetTestCaseRes, GetTestCaseReq>): voi
             suiteId: getParam('suiteId')
         };
         
-        console.log('[GET testCases] Query params - id:', query.id, 'suiteId:', query.suiteId, 'search:', query.search);
 
         try {
         // Verify project exists
@@ -141,37 +138,23 @@ export default function handle(ctx: CtxGet<GetTestCaseRes, GetTestCaseReq>): voi
             // Get all test cases and filter
             const allTestCases = repository.findAll();
             
-            console.log('[GET testCases] Found', allTestCases.length, 'total test cases');
-            if (query.suiteId) {
-                console.log('[GET testCases] Filtering for suiteId:', query.suiteId);
-            }
-            
             // Map to response items with issue data
             testCases = allTestCases
                 .map(testCase => {
                     const issue = findIssueByTestCaseId(testCase.id, ytProject);
                     const suiteIdFromIssue = issue?.extensionProperties?.suiteId;
-                    const mapped = {
+                    return {
                         id: testCase.id,
                         issueId: issue?.idReadable || issue?.id || '',
                         summary: testCase.summary || '',
                         description: testCase.description || '',
                         suiteId: suiteIdFromIssue
                     };
-                    console.log('[GET testCases] Mapping test case:', testCase.id, 
-                               'summary:', testCase.summary, 
-                               'suiteId from issue:', suiteIdFromIssue,
-                               'issue ID:', issue?.idReadable || issue?.id);
-                    return mapped;
                 })
                 .filter(item => {
                     // Filter by suiteId if provided
-                    if (query.suiteId) {
-                        if (item.suiteId !== query.suiteId) {
-                            console.log('[GET testCases] Filtering out:', item.id, 'suiteId:', item.suiteId, 'expected:', query.suiteId);
-                            return false;
-                        }
-                        console.log('[GET testCases] Keeping:', item.id, 'suiteId:', item.suiteId);
+                    if (query.suiteId && item.suiteId !== query.suiteId) {
+                        return false;
                     }
                     // Filter by search if provided
                     if (query.search) {
@@ -181,8 +164,6 @@ export default function handle(ctx: CtxGet<GetTestCaseRes, GetTestCaseReq>): voi
                     }
                     return true;
                 });
-            
-            console.log('[GET testCases] After filtering:', testCases.length, 'test cases');
         }
 
         // Calculate total before pagination
@@ -191,26 +172,15 @@ export default function handle(ctx: CtxGet<GetTestCaseRes, GetTestCaseReq>): voi
         // Apply pagination
         const paginatedItems = testCases.slice(query.offset, query.offset + query.limit);
 
-        const response: GetTestCaseRes = {
+        ctx.response.json({
             items: paginatedItems,
             total: total
-        };
-
-        console.log('[GET testCases] Returning response with', response.items.length, 'items, total:', response.total);
-        console.log('[GET testCases] First item:', response.items[0] ? JSON.stringify(response.items[0]) : 'none');
-
-        ctx.response.json(response);
+        });
         } catch (innerError: any) {
-            console.error('[GET testCases] Inner error:', innerError);
-            console.error('[GET testCases] Error message:', innerError?.message);
-            console.error('[GET testCases] Error stack:', innerError?.stack);
             ctx.response.code = 500;
-            ctx.response.json({ error: innerError?.message || `Failed to fetch test cases: ${innerError}` } as any);
+            ctx.response.json({ error: innerError?.message || 'Failed to fetch test cases' } as any);
         }
     } catch (outerError: any) {
-        console.error('[GET testCases] Outer error (handler initialization):', outerError);
-        console.error('[GET testCases] Error message:', outerError?.message);
-        console.error('[GET testCases] Error stack:', outerError?.stack);
         ctx.response.code = 500;
         ctx.response.json({ 
             error: outerError?.message || 'Handler initialization failed',
