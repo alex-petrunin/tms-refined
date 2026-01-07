@@ -5,6 +5,7 @@ import Button from '@jetbrains/ring-ui-built/components/button/button';
 import Dialog from '@jetbrains/ring-ui-built/components/dialog/dialog';
 import {Content, Header} from '@jetbrains/ring-ui-built/components/island/island';
 import Panel from '@jetbrains/ring-ui-built/components/panel/panel';
+import {LiveTestCaseCount} from './LiveTestCaseCount';
 
 interface TestSuite {
   id: string;
@@ -14,13 +15,14 @@ interface TestSuite {
 }
 
 interface TestSuiteListProps {
+  projectId: string;
   suites: TestSuite[];
   onEdit: (suiteId: string) => void;
   onDelete: (suiteId: string, suiteName: string) => void;
   deleting?: boolean;
 }
 
-export const TestSuiteList = memo<TestSuiteListProps>(({suites, onEdit, onDelete, deleting}) => {
+export const TestSuiteList = memo<TestSuiteListProps>(({projectId, suites, onEdit, onDelete, deleting}) => {
   const [confirmDelete, setConfirmDelete] = useState<{id: string; name: string} | null>(null);
 
   const handleDeleteClick = useCallback((id: string, name: string) => {
@@ -49,7 +51,13 @@ export const TestSuiteList = memo<TestSuiteListProps>(({suites, onEdit, onDelete
   const columns: Column<typeof data[0]>[] = useMemo(() => [
     {id: 'name', title: 'Name'},
     {id: 'description', title: 'Description'},
-    {id: 'testCaseCount', title: 'Test Cases'},
+    {
+      id: 'testCaseCount',
+      title: 'Test Cases',
+      getValue: (item) => (
+        <LiveTestCaseCount projectId={projectId} suiteId={item.id} />
+      )
+    },
     {
       id: 'actions',
       title: 'Actions',
@@ -68,7 +76,7 @@ export const TestSuiteList = memo<TestSuiteListProps>(({suites, onEdit, onDelete
         </div>
       )
     }
-  ], [onEdit, handleDeleteClick, deleting]);
+  ], [projectId, onEdit, handleDeleteClick, deleting]);
 
   return (
     <>

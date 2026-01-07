@@ -125,6 +125,7 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
         />
       ) : (
         <TestSuiteList
+          projectId={projectId || ''}
           suites={testSuites}
           onEdit={handleEdit}
           onDelete={handleDelete}
