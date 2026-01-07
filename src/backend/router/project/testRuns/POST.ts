@@ -118,7 +118,9 @@ export default function handle(ctx: CtxPost<CreateTestRunReq, CreateTestRunRes>)
         }
 
         // Initialize repository and use case
-        const repository = new YouTrackTestRunRepositorySync(targetProjectKey, ctx.currentUser);
+        // Pass both test run project and test case project for proper lookups
+        const testCaseProjectKey = ctx.project.shortName || ctx.project.key || '';
+        const repository = new YouTrackTestRunRepositorySync(targetProjectKey, ctx.currentUser, testCaseProjectKey);
         const useCase = new CreateTestRunSyncUseCase(repository);
 
         // Execute use case to create test run

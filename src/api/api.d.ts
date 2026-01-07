@@ -1,13 +1,13 @@
 import { ExtractRPCFromHandler } from "../backend/types/utility";
-import * as globalsettingsGETHandler from "../backend/router/global/settings/GET";
 import * as globaldemoGETHandler from "../backend/router/global/demo/GET";
+import * as globalsettingsGETHandler from "../backend/router/global/settings/GET";
 import * as globaltestCaseProjectGETHandler from "../backend/router/global/testCaseProject/GET";
 import * as projectdemoGETHandler from "../backend/router/project/demo/GET";
-import * as projectsettingsGETHandler from "../backend/router/project/settings/GET";
 import * as projectintegrationsDELETEHandler from "../backend/router/project/integrations/DELETE";
 import * as projectintegrationsGETHandler from "../backend/router/project/integrations/GET";
 import * as projectintegrationsPOSTHandler from "../backend/router/project/integrations/POST";
 import * as projectintegrationsPUTHandler from "../backend/router/project/integrations/PUT";
+import * as projectsettingsGETHandler from "../backend/router/project/settings/GET";
 import * as projecttestCasesGETHandler from "../backend/router/project/testCases/GET";
 import * as projecttestCasesPOSTHandler from "../backend/router/project/testCases/POST";
 import * as projecttestCasesPUTHandler from "../backend/router/project/testCases/PUT";
@@ -23,11 +23,11 @@ import * as projecttestRunsresultsPOSTHandler from "../backend/router/project/te
 
 export type ApiRouter = {
     global: {
-    settings: {
-    GET: ExtractRPCFromHandler<globalsettingsGETHandler.Handle>;
-    };
     demo: {
     GET: ExtractRPCFromHandler<globaldemoGETHandler.Handle>;
+    };
+    settings: {
+    GET: ExtractRPCFromHandler<globalsettingsGETHandler.Handle>;
     };
     testCaseProject: {
     GET: ExtractRPCFromHandler<globaltestCaseProjectGETHandler.Handle>;
@@ -42,14 +42,14 @@ export type ApiRouter = {
     demo: {
     GET: ExtractRPCFromHandler<projectdemoGETHandler.Handle>;
     };
-    settings: {
-    GET: ExtractRPCFromHandler<projectsettingsGETHandler.Handle>;
-    };
     integrations: {
     DELETE: ExtractRPCFromHandler<projectintegrationsDELETEHandler.Handle>;
     GET: ExtractRPCFromHandler<projectintegrationsGETHandler.Handle>;
     POST: ExtractRPCFromHandler<projectintegrationsPOSTHandler.Handle>;
     PUT: ExtractRPCFromHandler<projectintegrationsPUTHandler.Handle>;
+    };
+    settings: {
+    GET: ExtractRPCFromHandler<projectsettingsGETHandler.Handle>;
     };
     testCases: {
     GET: ExtractRPCFromHandler<projecttestCasesGETHandler.Handle>;

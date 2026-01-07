@@ -102,7 +102,9 @@ export default function handle(ctx: CtxGet<ListTestRunsRes, GetTestRunReq>): voi
         }
 
         // Initialize repository
-        const repository = new YouTrackTestRunRepositorySync(targetProjectKey, ctx.currentUser);
+        // Pass both test run project and test case project for proper lookups
+        const testCaseProjectKey = ctx.project.shortName || ctx.project.key || '';
+        const repository = new YouTrackTestRunRepositorySync(targetProjectKey, ctx.currentUser, testCaseProjectKey);
 
         // Get test runs based on query
         let testRuns: GetTestRunItem[];
