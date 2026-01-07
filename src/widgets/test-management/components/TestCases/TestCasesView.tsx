@@ -1,5 +1,6 @@
-import React, {memo, useState, useCallback} from 'react';
+import React, {memo, useState, useCallback, useEffect} from 'react';
 import {useTestCases} from '../../hooks/useTestCases';
+import {useTestSuites} from '../../hooks/useTestSuites';
 import {LoadingState} from '../shared/LoadingState';
 import {ErrorState} from '../shared/ErrorState';
 import {EmptyState} from '../shared/EmptyState';
@@ -14,14 +15,28 @@ interface TestCasesViewProps {
 export const TestCasesView = memo<TestCasesViewProps>(({projectId}) => {
   const [showForm, setShowForm] = useState(false);
   const [editingCase, setEditingCase] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [suiteFilter, setSuiteFilter] = useState<string>('');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [searchInput]);
   
   const {testCases, total, loading, error, refetch} = useTestCases({
     projectId,
-    search,
-    suiteId: suiteFilter || undefined,
+    search: debouncedSearch,
     limit: 50
+  });
+
+  // Fetch test suites to get suite names
+  const {testSuites} = useTestSuites({
+    projectId,
+    limit: 100
   });
 
   const handleCreate = useCallback(() => {
@@ -69,16 +84,9 @@ export const TestCasesView = memo<TestCasesViewProps>(({projectId}) => {
           <input
             type="text"
             placeholder="Search test cases..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             className="search-input"
-          />
-          <input
-            type="text"
-            placeholder="Filter by suite ID..."
-            value={suiteFilter}
-            onChange={(e) => setSuiteFilter(e.target.value)}
-            className="filter-input"
           />
           <Button primary onClick={handleCreate}>
             Create Test Case
@@ -94,6 +102,7 @@ export const TestCasesView = memo<TestCasesViewProps>(({projectId}) => {
       ) : (
         <TestCaseList
           testCases={testCases}
+          testSuites={testSuites}
           onEdit={handleEdit}
         />
       )}

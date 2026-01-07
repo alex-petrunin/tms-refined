@@ -49,6 +49,21 @@ const AppComponent: FC = () => {
         }
     }, [testCaseProjects, state.selectedProjectKey, dispatch]);
 
+    // Listen for navigation to integrations
+    useEffect(() => {
+        const handleNavigateToIntegrations = () => {
+            dispatch({
+                type: "changePageInProject",
+                payload: { page: "integrations" },
+            });
+        };
+
+        window.addEventListener('navigate-to-integrations', handleNavigateToIntegrations as EventListener);
+        return () => {
+            window.removeEventListener('navigate-to-integrations', handleNavigateToIntegrations as EventListener);
+        };
+    }, [dispatch]);
+
     // If no projects are configured, show interface with a placeholder project
     const projectKey = state.selectedProjectKey || "default";
     

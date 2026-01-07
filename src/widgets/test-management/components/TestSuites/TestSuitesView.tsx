@@ -17,7 +17,6 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
   const host = useHost();
   const [showForm, setShowForm] = useState(false);
   const [editingSuite, setEditingSuite] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -25,7 +24,6 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
   
   const {testSuites, total, loading, error, refetch} = useTestSuites({
     projectId,
-    search,
     limit: 50
   });
 
@@ -97,13 +95,6 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
           <span className="count-badge">{total}</span>
         </div>
         <div className="view-actions">
-          <input
-            type="text"
-            placeholder="Search test suites..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="search-input"
-          />
           <Button primary onClick={handleCreate}>
             Create Test Suite
           </Button>
