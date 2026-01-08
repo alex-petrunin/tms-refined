@@ -2,21 +2,111 @@ import {ExecutionTargetType} from "../enums/ExecutionTargetType";
 
 export type ExecutionTargetID = string;
 
+/**
+ * Provider-specific execution configuration
+ */
+export interface ProviderSpecificConfig {
+    // Marker interface for type safety
+}
+
+/**
+ * GitLab execution configuration
+ */
+export interface GitLabExecutionConfig extends ProviderSpecificConfig {
+    /** Branch or tag name to run the pipeline on */
+    ref: string;
+}
+
+/**
+ * GitHub Actions execution configuration
+ */
+export interface GitHubExecutionConfig extends ProviderSpecificConfig {
+    /** Workflow file path (e.g., 'ci.yml' or '.github/workflows/test.yml') */
+    workflowFile: string;
+    /** Optional branch name. If not specified, uses repository default branch */
+    ref?: string;
+}
+
+/**
+ * Manual execution configuration
+ */
+export interface ManualExecutionConfig extends ProviderSpecificConfig {
+    // Empty for now - manual execution doesn't require specific config
+}
+
+/**
+ * ExecutionTargetSnapshot - Value Object
+ * 
+ * Represents an immutable snapshot of execution target configuration.
+ * This is a value object identified by its content (fingerprint), not an arbitrary ID.
+ * Always embedded in TestCase, TestSuite, or TestRun entities.
+ * 
+ * Key properties:
+ * - integrationId: References the Integration entity (project-level credentials)
+ * - type: The provider type (GITLAB, GITHUB, MANUAL)
+ * - config: Provider-specific execution configuration
+ */
 export class ExecutionTargetSnapshot {
     constructor(
-        public readonly id: ExecutionTargetID,
+        /** Integration ID - references the Integration entity for credentials */
+        public readonly integrationId: string,
+        /** Human-readable name for this execution target */
         public name: string,
-        public type: ExecutionTargetType, // "GITLAB" | "GITHUB" | "MANUAL";
-        public ref: string, // pipeline id / workflow id
-
+        /** Provider type */
+        public type: ExecutionTargetType,
+        /** Provider-specific execution configuration */
+        public config: ProviderSpecificConfig,
+        /** @deprecated Legacy field for backward compatibility. Use config instead. */
+        public ref?: string,
+        /** @deprecated Legacy field for backward compatibility. No longer used as identity. */
+        public id?: ExecutionTargetID,
     ){}
 
     /**
      * Generates a deterministic fingerprint for idempotency checks.
      * The fingerprint is based on the immutable identity properties of the execution target.
+     * This serves as the content-based identity for the value object.
      */
     fingerprint(): string {
-        // Use id, type, and ref as they represent the unique identity of the execution target
-        return `${this.id}:${this.type}:${this.ref}`;
+        // Serialize config to JSON for fingerprinting
+        const configStr = JSON.stringify(this.config);
+        return `${this.integrationId}:${this.type}:${configStr}`;
+    }
+
+    /**
+     * Helper to get GitLab-specific config
+     */
+    asGitLabConfig(): GitLabExecutionConfig | null {
+        if (this.type !== ExecutionTargetType.GITLAB) return null;
+        
+        // Handle legacy ref field
+        if (!this.config && this.ref) {
+            return { ref: this.ref };
+        }
+        
+        return this.config as GitLabExecutionConfig;
+    }
+
+    /**
+     * Helper to get GitHub-specific config
+     */
+    asGitHubConfig(): GitHubExecutionConfig | null {
+        if (this.type !== ExecutionTargetType.GITHUB) return null;
+        
+        // Handle legacy ref field (parse workflow:branch format)
+        if (!this.config && this.ref) {
+            const [workflowFile, branch] = this.ref.split(':');
+            return { workflowFile, ref: branch };
+        }
+        
+        return this.config as GitHubExecutionConfig;
+    }
+
+    /**
+     * Helper to get Manual-specific config
+     */
+    asManualConfig(): ManualExecutionConfig | null {
+        if (this.type !== ExecutionTargetType.MANUAL) return null;
+        return (this.config as ManualExecutionConfig) || {};
     }
 }

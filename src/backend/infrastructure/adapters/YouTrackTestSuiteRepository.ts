@@ -1,5 +1,7 @@
 import { TestSuiteRepository } from "../../application/ports/TestSuiteRepository";
 import { TestSuite, TestSuiteID } from "../../domain/entities/TestSuite";
+import { TestCaseID } from "../../domain/entities/TestCase";
+import { ExecutionTargetSnapshot } from "../../domain/valueObjects/ExecutionTarget";
 
 /**
  * YouTrack implementation of TestSuiteRepository.
@@ -40,7 +42,8 @@ export class YouTrackTestSuiteRepository implements TestSuiteRepository {
             id: testSuite.id,
             name: testSuite.name,
             description: testSuite.description,
-            testCaseIDs: testSuite.testCaseIDs
+            testCaseIDs: testSuite.testCaseIDs,
+            defaultExecutionTarget: testSuite.defaultExecutionTarget ? this.serializeExecutionTarget(testSuite.defaultExecutionTarget) : undefined
         };
         
         if (index >= 0) {
@@ -74,7 +77,9 @@ export class YouTrackTestSuiteRepository implements TestSuiteRepository {
             suiteData.id,
             suiteData.name,
             suiteData.description,
-            suiteData.testCaseIDs
+            suiteData.testCaseIDs,
+            undefined, // issueId
+            suiteData.defaultExecutionTarget ? this.deserializeExecutionTarget(suiteData.defaultExecutionTarget) : undefined
         );
     }
 
@@ -94,8 +99,19 @@ export class YouTrackTestSuiteRepository implements TestSuiteRepository {
             data.id,
             data.name,
             data.description,
-            data.testCaseIDs
+            data.testCaseIDs,
+            undefined, // issueId
+            data.defaultExecutionTarget ? this.deserializeExecutionTarget(data.defaultExecutionTarget) : undefined
         ));
+    }
+
+    /**
+     * Find the test suite that contains a specific test case.
+     * Uses reverse lookup through suite composition.
+     */
+    findByTestCaseId(testCaseId: TestCaseID): TestSuite | null {
+        const allSuites = this.findAll();
+        return allSuites.find(suite => suite.testCaseIDs.includes(testCaseId)) || null;
     }
 
     /**
@@ -141,7 +157,36 @@ export class YouTrackTestSuiteRepository implements TestSuiteRepository {
     /**
      * Save suites to project extension properties.
      */
-    private saveSuites(project: any, suites: Array<{id: string; name: string; description: string; testCaseIDs: string[]}>): void {
+    private saveSuites(project: any, suites: any[]): void {
         project.extensionProperties.testSuites = JSON.stringify(suites);
+    }
+
+    /**
+     * Serialize ExecutionTargetSnapshot to plain object for JSON storage
+     */
+    private serializeExecutionTarget(target: ExecutionTargetSnapshot): any {
+        return {
+            integrationId: target.integrationId,
+            name: target.name,
+            type: target.type,
+            config: target.config,
+            // Keep legacy fields for backward compatibility
+            ref: target.ref,
+            id: target.id
+        };
+    }
+
+    /**
+     * Deserialize plain object to ExecutionTargetSnapshot
+     */
+    private deserializeExecutionTarget(data: any): ExecutionTargetSnapshot {
+        return new ExecutionTargetSnapshot(
+            data.integrationId,
+            data.name,
+            data.type,
+            data.config,
+            data.ref,
+            data.id
+        );
     }
 }

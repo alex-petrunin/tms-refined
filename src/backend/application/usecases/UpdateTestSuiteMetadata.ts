@@ -1,10 +1,12 @@
 import { TestSuite, TestSuiteID } from "../../domain/entities/TestSuite";
 import { TestSuiteRepository } from "../ports/TestSuiteRepository";
+import { ExecutionTargetSnapshot } from "../../domain/valueObjects/ExecutionTarget";
 
 export interface UpdateTestSuiteMetadataInput {
     testSuiteID: TestSuiteID;
     name?: string;
     description?: string;
+    defaultExecutionTarget?: ExecutionTargetSnapshot | null;
 }
 
 /**
@@ -25,6 +27,9 @@ export class UpdateTestSuiteMetadataUseCase {
         }
         if (input.description !== undefined) {
             testSuite.description = input.description;
+        }
+        if (input.defaultExecutionTarget !== undefined) {
+            testSuite.defaultExecutionTarget = input.defaultExecutionTarget || undefined;
         }
         
         this.repo.save(testSuite);

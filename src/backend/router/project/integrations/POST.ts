@@ -6,6 +6,7 @@ export type CreateIntegrationReq = {
     name: string;
     type: 'GITLAB' | 'GITHUB' | 'MANUAL';
     enabled: boolean;
+    isDefault?: boolean;
     config: {
         projectUrl?: string;
         pipelineRef?: string;
@@ -22,6 +23,7 @@ export type CreateIntegrationRes = {
     name: string;
     type: 'GITLAB' | 'GITHUB' | 'MANUAL';
     enabled: boolean;
+    isDefault: boolean;
     config: {
         projectUrl?: string;
         pipelineRef?: string;
@@ -57,6 +59,17 @@ export default function handle(ctx: CtxPost<CreateIntegrationReq, CreateIntegrat
             console.warn('[POST integrations] Failed to parse existing integrations:', e);
         }
 
+        // If isDefault is true, unmark any existing default for this type
+        const isDefault = body.isDefault || false;
+        if (isDefault) {
+            integrations.forEach(integration => {
+                if (integration.type === body.type && integration.isDefault) {
+                    integration.isDefault = false;
+                    console.log('[POST integrations] Unmarked previous default:', integration.name);
+                }
+            });
+        }
+
         // Generate unique ID
         const timestamp = Date.now().toString(36);
         const random = Math.random().toString(36).substring(2, 8);
@@ -68,6 +81,7 @@ export default function handle(ctx: CtxPost<CreateIntegrationReq, CreateIntegrat
             name: body.name,
             type: body.type,
             enabled: body.enabled,
+            isDefault: isDefault,
             config: body.config || {}
         };
 
