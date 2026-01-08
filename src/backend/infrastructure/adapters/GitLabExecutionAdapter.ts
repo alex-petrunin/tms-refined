@@ -44,6 +44,8 @@ export class GitLabExecutionAdapter implements ExecutionTriggerPort {
     }
 
     async trigger(testRun: TestRun): Promise<void> {
+        console.log('=== GitLabExecutionAdapter START ===');
+        
         // Validate execution target type
         if (testRun.executionTarget.type !== ExecutionTargetType.GITLAB) {
             throw new Error(
@@ -52,22 +54,30 @@ export class GitLabExecutionAdapter implements ExecutionTriggerPort {
             );
         }
 
-        // Extract branch/ref from ExecutionTargetSnapshot
-        const ref = testRun.executionTarget.ref;
-        if (!ref || ref.trim() === "") {
+        // Extract branch/ref from ExecutionTargetSnapshot config
+        const gitlabConfig = testRun.executionTarget.asGitLabConfig();
+        if (!gitlabConfig || !gitlabConfig.ref || gitlabConfig.ref.trim() === "") {
             throw new Error(
-                `ExecutionTargetSnapshot.ref is required for GitLab pipeline trigger. ` +
+                `GitLabExecutionConfig.ref is required for GitLab pipeline trigger. ` +
                 `TestRun ID: ${testRun.id}`
             );
         }
 
+        console.log('Config:', {
+            baseUrl: this.config.baseUrl,
+            projectId: this.config.projectId,
+            ref: gitlabConfig.ref,
+            testRunId: testRun.id
+        });
+
         try {
-            const pipeline = await this.triggerPipeline(ref, testRun.id);
-            console.log(
-                `GitLabExecutionAdapter: Successfully triggered pipeline ${pipeline.id} ` +
-                `for TestRun ${testRun.id} on ref '${ref}'. ` +
-                `Pipeline URL: ${pipeline.web_url}`
-            );
+            const pipeline = await this.triggerPipeline(gitlabConfig.ref, testRun.id);
+            console.log('=== GitLab Pipeline Created ===');
+            console.log('Pipeline:', {
+                id: pipeline.id,
+                status: pipeline.status,
+                webUrl: pipeline.web_url
+            });
 
             // Store pipeline ID for webhook lookup
             if (this.testRunRepository) {

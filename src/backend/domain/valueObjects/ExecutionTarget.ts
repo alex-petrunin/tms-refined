@@ -1,7 +1,5 @@
 import {ExecutionTargetType} from "../enums/ExecutionTargetType";
 
-export type ExecutionTargetID = string;
-
 /**
  * Provider-specific execution configuration
  */
@@ -55,11 +53,7 @@ export class ExecutionTargetSnapshot {
         /** Provider type */
         public type: ExecutionTargetType,
         /** Provider-specific execution configuration */
-        public config: ProviderSpecificConfig,
-        /** @deprecated Legacy field for backward compatibility. Use config instead. */
-        public ref?: string,
-        /** @deprecated Legacy field for backward compatibility. No longer used as identity. */
-        public id?: ExecutionTargetID,
+        public config: ProviderSpecificConfig
     ){}
 
     /**
@@ -78,12 +72,6 @@ export class ExecutionTargetSnapshot {
      */
     asGitLabConfig(): GitLabExecutionConfig | null {
         if (this.type !== ExecutionTargetType.GITLAB) return null;
-        
-        // Handle legacy ref field
-        if (!this.config && this.ref) {
-            return { ref: this.ref };
-        }
-        
         return this.config as GitLabExecutionConfig;
     }
 
@@ -92,13 +80,6 @@ export class ExecutionTargetSnapshot {
      */
     asGitHubConfig(): GitHubExecutionConfig | null {
         if (this.type !== ExecutionTargetType.GITHUB) return null;
-        
-        // Handle legacy ref field (parse workflow:branch format)
-        if (!this.config && this.ref) {
-            const [workflowFile, branch] = this.ref.split(':');
-            return { workflowFile, ref: branch };
-        }
-        
         return this.config as GitHubExecutionConfig;
     }
 

@@ -9,11 +9,11 @@ export interface CreateTestRunInput {
     suiteID: TestSuiteID;
     testCaseIDs: TestCaseID[];
     executionMode?: "MANAGED" | "OBSERVED";
-    executionTarget?: {
-        id?: string;
-        name?: string;
-        type?: "GITLAB" | "GITHUB" | "MANUAL";
-        ref?: string;
+    executionTarget: {
+        integrationId: string;
+        name: string;
+        type: "GITLAB" | "GITHUB" | "MANUAL";
+        config: any;  // Provider-specific
     };
 }
 
@@ -28,12 +28,12 @@ export class CreateTestRunSyncUseCase {
         // Generate unique ID
         const testRunId = this.generateId();
         
-        // Build execution target
+        // Build execution target - clean, no legacy
         const executionTarget = new ExecutionTargetSnapshot(
-            input.executionTarget?.id || this.generateId(),
-            input.executionTarget?.name || 'Manual Execution',
-            this.mapExecutionTargetType(input.executionTarget?.type || 'MANUAL'),
-            input.executionTarget?.ref || ''
+            input.executionTarget.integrationId,
+            input.executionTarget.name,
+            this.mapExecutionTargetType(input.executionTarget.type),
+            input.executionTarget.config
         );
         
         // Create test run
@@ -73,8 +73,7 @@ export class CreateTestRunSyncUseCase {
             case 'MANUAL':
                 return ExecutionTargetType.MANUAL;
             default:
-                return ExecutionTargetType.MANUAL;
+                throw new Error(`Invalid execution target type: ${type}`);
         }
     }
 }
-

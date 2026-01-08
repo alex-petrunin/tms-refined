@@ -57,6 +57,9 @@ export class CIAdapterFactory {
      * @throws Error if the execution target type is not supported
      */
     async createAdapter(executionTarget: ExecutionTargetSnapshot): Promise<ExecutionTriggerPort> {
+        console.log('=== CIAdapterFactory START ===');
+        console.log('Loading integration:', executionTarget.integrationId, 'for project:', this.projectId);
+        
         // Load integration configuration
         const integration = await this.integrationRepository.findById(
             executionTarget.integrationId,
@@ -64,6 +67,7 @@ export class CIAdapterFactory {
         );
 
         if (!integration) {
+            console.error('Integration NOT FOUND:', executionTarget.integrationId);
             throw new IntegrationNotFoundError(
                 `Integration '${executionTarget.integrationId}' not found. ` +
                 `Cannot create execution adapter.`
@@ -71,11 +75,19 @@ export class CIAdapterFactory {
         }
 
         if (!integration.enabled) {
+            console.error('Integration DISABLED:', integration.name);
             throw new Error(
                 `Integration '${integration.name}' is disabled. ` +
                 `Cannot create execution adapter.`
             );
         }
+
+        console.log('Integration loaded:', {
+            name: integration.name,
+            type: integration.type,
+            enabled: integration.enabled,
+            configKeys: Object.keys(integration.config)
+        });
 
         // Create adapter based on integration type
         switch (integration.type) {

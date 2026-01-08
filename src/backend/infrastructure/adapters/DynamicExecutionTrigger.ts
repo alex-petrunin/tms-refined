@@ -26,11 +26,21 @@ export class DynamicExecutionTrigger implements ExecutionTriggerPort {
      * Triggers test execution by dynamically creating the appropriate adapter
      */
     async trigger(testRun: TestRun): Promise<void> {
+        console.log('=== DynamicExecutionTrigger START ===');
+        console.log('TestRun ID:', testRun.id);
+        console.log('ExecutionTarget:', {
+            integrationId: testRun.executionTarget.integrationId,
+            type: testRun.executionTarget.type,
+            config: testRun.executionTarget.config
+        });
+        
         // Create adapter based on test run's execution target
         const adapter = await this.adapterFactory.createAdapter(testRun.executionTarget);
+        console.log('Adapter created:', adapter.constructor.name);
         
         // Delegate to the adapter
         await adapter.trigger(testRun);
+        console.log('=== DynamicExecutionTrigger SUCCESS ===');
     }
 }
 

@@ -11,6 +11,7 @@ export interface RunTestCasesInput {
     suiteID: TestSuiteID;
     testCaseIDs: TestCaseID[];
     executionMode?: ExecutionModeType;
+    executionTarget?: ExecutionTargetSnapshot;  // NEW: direct execution target
 }
 
 /**
@@ -33,11 +34,81 @@ export class RunTestCasesUseCase {
     constructor(
         private testRunRepo: TestRunRepository,
         private triggerPort: ExecutionTriggerPort,
-        private executionTargetResolver: ExecutionTargetResolverPort
+        private executionTargetResolver: ExecutionTargetResolverPort | null  // null when using direct execution
     ) {}
 
     async execute(input: RunTestCasesInput): Promise<TestRunID[]> {
         const executionMode = input.executionMode ?? ExecutionModeType.MANAGED;
+        
+        // Simple path: executionTarget provided directly
+        if (input.executionTarget) {
+            return await this.executeWithTarget(input, executionMode);
+        }
+        
+        // Complex path: resolve targets per test case
+        return await this.executeWithResolver(input, executionMode);
+    }
+
+    /**
+     * Execute with a single execution target for all test cases
+     */
+    private async executeWithTarget(
+        input: RunTestCasesInput,
+        executionMode: ExecutionModeType
+    ): Promise<TestRunID[]> {
+        const target = input.executionTarget!;
+        
+        // Generate idempotency key
+        const sortedTestCaseIDs = [...input.testCaseIDs].sort().join(",");
+        const targetFingerprint = target.fingerprint();
+        const idempotencyKey = `${input.suiteID}:${sortedTestCaseIDs}:${targetFingerprint}:${executionMode}`;
+        
+        // Check for existing test run
+        const existingTestRun = await this.testRunRepo.findByIdempotencyKey(idempotencyKey);
+        if (existingTestRun && 
+            (existingTestRun.status === TestStatus.PENDING || 
+             existingTestRun.status === TestStatus.RUNNING)) {
+            return [existingTestRun.id];
+        }
+        
+        // Create new test run
+        const testRunID = crypto.randomUUID();
+        const testRun = new TestRun(
+            testRunID,
+            input.testCaseIDs,
+            input.suiteID,
+            target
+        );
+        
+        // Set status based on mode
+        if (executionMode === ExecutionModeType.MANAGED) {
+            testRun.start();
+        } else {
+            testRun.markAwaiting();
+        }
+        
+        // Persist
+        await this.testRunRepo.save(testRun, idempotencyKey);
+        
+        // Trigger execution for MANAGED mode
+        if (executionMode === ExecutionModeType.MANAGED) {
+            await this.triggerPort.trigger(testRun);
+        }
+        
+        return [testRunID];
+    }
+
+    /**
+     * Execute with per-test-case target resolution
+     */
+    private async executeWithResolver(
+        input: RunTestCasesInput,
+        executionMode: ExecutionModeType
+    ): Promise<TestRunID[]> {
+        if (!this.executionTargetResolver) {
+            throw new Error('ExecutionTargetResolver is required when executionTarget is not provided');
+        }
+
         const testRunIDs: TestRunID[] = [];
 
         // Step 1: Resolve Execution Targets for each TestCaseID
