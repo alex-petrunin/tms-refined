@@ -181,12 +181,10 @@ export class YouTrackTestSuiteRepository implements TestSuiteRepository {
      */
     private deserializeExecutionTarget(data: any): ExecutionTargetSnapshot {
         return new ExecutionTargetSnapshot(
-            data.integrationId,
-            data.name,
-            data.type,
-            data.config,
-            data.ref,
-            data.id
+            data.integrationId || '',
+            data.name || '',
+            data.type || ExecutionTargetType.MANUAL,
+            data.config || {}
         );
     }
 }

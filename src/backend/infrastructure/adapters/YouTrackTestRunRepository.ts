@@ -458,26 +458,28 @@ export class YouTrackTestRunRepository implements TestRunRepository {
         
         // Get execution target type from custom field
         const executionTargetTypeField = customFields.find((cf: any) => cf.name === 'Execution Target Type');
-        const executionTargetRefField = customFields.find((cf: any) => cf.name === 'Execution Target Reference');
         
         let executionTargetType = extProps.executionTargetType as ExecutionTargetType;
-        let executionTargetRef = extProps.executionTargetRef || '';
         
         if (executionTargetTypeField?.value?.name) {
             executionTargetType = this.mapFieldValueToExecutionTargetType(executionTargetTypeField.value.name);
         }
-        if (executionTargetRefField?.value) {
-            // Text fields can have value as string directly or as object with text property
-            executionTargetRef = typeof executionTargetRefField.value === 'string' 
-                ? executionTargetRefField.value 
-                : executionTargetRefField.value.text || executionTargetRefField.value;
+        
+        // Get config from extension properties (stored as JSON)
+        let config: any = {};
+        try {
+            if (extProps.executionTargetConfig) {
+                config = JSON.parse(extProps.executionTargetConfig);
+            }
+        } catch (e) {
+            console.warn('[mapIssueToTestRun] Failed to parse execution target config:', e);
         }
         
         const executionTarget = new ExecutionTargetSnapshot(
-            extProps.executionTargetId || '',
+            extProps.executionTargetIntegrationId || '',
             extProps.executionTargetName || '',
-            executionTargetType,
-            executionTargetRef
+            executionTargetType || ExecutionTargetType.MANUAL,
+            config
         );
 
         const testCaseIDs = extProps.testCaseIds 

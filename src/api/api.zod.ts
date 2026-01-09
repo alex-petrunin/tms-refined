@@ -33,20 +33,6 @@ export const testCaseProjectsResSchema = z.object({
   ),
 });
 
-export const projectDemoReqSchema = z.object({
-  projectId: z.string(),
-  message: z.string().optional(),
-});
-
-export const projectDemoResSchema = z.object({
-  projectInfo: z.object({
-    id: z.string(),
-    name: z.string(),
-    shortName: z.string(),
-    description: z.string().optional(),
-  }),
-});
-
 export const settingsReqSchema = z.object({
   projectId: z.string(),
 });
@@ -174,6 +160,20 @@ export const updateIntegrationResSchema = z.object({
   }),
 });
 
+export const projectDemoReqSchema = z.object({
+  projectId: z.string(),
+  message: z.string().optional(),
+});
+
+export const projectDemoResSchema = z.object({
+  projectInfo: z.object({
+    id: z.string(),
+    name: z.string(),
+    shortName: z.string(),
+    description: z.string().optional(),
+  }),
+});
+
 export const getTestRunReqSchema = z.object({
   projectId: z.string().optional(),
   id: z.string().optional(),
@@ -290,6 +290,13 @@ export const updateTestCaseResSchema = z.object({
   suiteId: z.string().optional(),
 });
 
+export const gitLabWebhookReqSchema = z.object({});
+
+export const gitLabWebhookResSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+});
+
 export const deleteTestSuiteReqSchema = z.object({
   projectId: z.string(),
   id: z.string(),
@@ -348,13 +355,6 @@ export const updateTestSuiteResSchema = z.object({
   testCaseIDs: z.array(z.string()),
 });
 
-export const gitLabWebhookReqSchema = z.object({});
-
-export const gitLabWebhookResSchema = z.object({
-  success: z.boolean(),
-  message: z.string().optional(),
-});
-
 export const testRunResultReqSchema = z.object({
   testRunID: z.string(),
   passed: z.boolean(),
@@ -393,6 +393,24 @@ export const tMSQueryResSchema = z.object({
   ),
 });
 
+export const workflowItemSchema = z.object({
+  name: z.string(),
+  path: z.string(),
+});
+
+export const getGitHubWorkflowsResSchema = z.object({
+  workflows: z.array(workflowItemSchema),
+});
+
+export const refItemSchema = z.object({
+  name: z.string(),
+  type: z.union([z.literal("branch"), z.literal("tag")]),
+});
+
+export const getGitLabRefsResSchema = z.object({
+  refs: z.array(refItemSchema),
+});
+
 export const executionTargetDetailsSchema = z.object({
   integrationId: z.string(),
   name: z.string(),
@@ -419,24 +437,6 @@ export const runTestSuiteReqSchema = z.object({
 
 export const runTestSuiteResSchema = z.object({
   testRunIDs: z.array(z.string()),
-});
-
-export const refItemSchema = z.object({
-  name: z.string(),
-  type: z.union([z.literal("branch"), z.literal("tag")]),
-});
-
-export const getGitLabRefsResSchema = z.object({
-  refs: z.array(refItemSchema),
-});
-
-export const workflowItemSchema = z.object({
-  name: z.string(),
-  path: z.string(),
-});
-
-export const getGitHubWorkflowsResSchema = z.object({
-  workflows: z.array(workflowItemSchema),
 });
 
 // Nested schema object for validation system
@@ -467,12 +467,6 @@ export const schema = {
     }
   },
   project: {
-    demo: {
-      GET: {
-        Req: projectDemoReqSchema,
-        Res: projectDemoResSchema
-      }
-    },
     settings: {
       GET: {
         Req: settingsReqSchema,
@@ -497,20 +491,26 @@ export const schema = {
         Res: updateIntegrationResSchema
       },
       _integrationId: {
-        gitlab: {
-          refs: {
-            GET: {
-              Res: getGitLabRefsResSchema
-            }
-          }
-        },
         github: {
           workflows: {
             GET: {
               Res: getGitHubWorkflowsResSchema
             }
           }
+        },
+        gitlab: {
+          refs: {
+            GET: {
+              Res: getGitLabRefsResSchema
+            }
+          }
         }
+      }
+    },
+    demo: {
+      GET: {
+        Req: projectDemoReqSchema,
+        Res: projectDemoResSchema
       }
     },
     testRuns: {

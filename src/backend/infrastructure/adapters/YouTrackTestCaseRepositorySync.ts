@@ -177,10 +177,10 @@ export class YouTrackTestCaseRepositorySync implements TestCaseRepositorySync {
         
         // Set execution target if provided
         if (testCase.executionTargetSnapshot) {
-            issue.extensionProperties.executionTargetId = testCase.executionTargetSnapshot.id;
+            issue.extensionProperties.executionTargetIntegrationId = testCase.executionTargetSnapshot.integrationId;
             issue.extensionProperties.executionTargetName = testCase.executionTargetSnapshot.name;
             issue.extensionProperties.executionTargetType = testCase.executionTargetSnapshot.type;
-            issue.extensionProperties.executionTargetRef = testCase.executionTargetSnapshot.ref;
+            issue.extensionProperties.executionTargetConfig = JSON.stringify(testCase.executionTargetSnapshot.config);
         }
         
         // Set custom fields
@@ -197,10 +197,10 @@ export class YouTrackTestCaseRepositorySync implements TestCaseRepositorySync {
         
         // Update execution target if provided
         if (testCase.executionTargetSnapshot) {
-            issue.extensionProperties.executionTargetId = testCase.executionTargetSnapshot.id;
+            issue.extensionProperties.executionTargetIntegrationId = testCase.executionTargetSnapshot.integrationId;
             issue.extensionProperties.executionTargetName = testCase.executionTargetSnapshot.name;
             issue.extensionProperties.executionTargetType = testCase.executionTargetSnapshot.type;
-            issue.extensionProperties.executionTargetRef = testCase.executionTargetSnapshot.ref;
+            issue.extensionProperties.executionTargetConfig = JSON.stringify(testCase.executionTargetSnapshot.config);
         }
         
         this.setCustomFields(issue, testCase);
@@ -229,10 +229,8 @@ export class YouTrackTestCaseRepositorySync implements TestCaseRepositorySync {
                     }
                 }
 
-                const targetRefField = issue.project.findFieldByName('Execution Target Reference');
-                if (targetRefField) {
-                    issue.fields['Execution Target Reference'] = testCase.executionTargetSnapshot.ref;
-                }
+                // Note: Execution Target config is stored as JSON in extension properties
+                // No need for a separate "Execution Target Reference" custom field
             }
         } catch (error) {
             console.warn('Failed to set custom fields:', error);
@@ -270,14 +268,42 @@ export class YouTrackTestCaseRepositorySync implements TestCaseRepositorySync {
         // Use the human-readable issue ID (e.g., "TEST-123") as the test case ID
         const testCaseId = extProps.testCaseId || issue.idReadable || issue.id;
         
-        // Get execution target from extension properties
+        // Get execution target - prioritize custom field for type, config from extension properties
+        let executionTargetType: ExecutionTargetType | null = null;
+        
+        // Try to read type from custom field first (what users see in YouTrack UI)
+        try {
+            const typeField = issue.fields && issue.fields['Execution Target Type'];
+            if (typeField && typeField.name) {
+                executionTargetType = this.mapFieldValueToExecutionTargetType(typeField.name);
+            }
+        } catch (e) {
+            console.warn('[mapIssueToTestCase] Failed to read execution target type from custom field:', e);
+        }
+        
+        // Fallback to extension property if custom field not set
+        if (!executionTargetType) {
+            executionTargetType = extProps.executionTargetType as ExecutionTargetType;
+        }
+        
+        // Get config from extension properties (stored as JSON)
+        let config: any = {};
+        try {
+            if (extProps.executionTargetConfig) {
+                config = JSON.parse(extProps.executionTargetConfig);
+            }
+        } catch (e) {
+            console.warn('[mapIssueToTestCase] Failed to parse execution target config:', e);
+        }
+        
+        // Create execution target snapshot if we have the required data
         let executionTargetSnapshot: ExecutionTargetSnapshot | undefined;
-        if (extProps.executionTargetId) {
+        if (extProps.executionTargetIntegrationId || (executionTargetType && config)) {
             executionTargetSnapshot = new ExecutionTargetSnapshot(
-                extProps.executionTargetId,
+                extProps.executionTargetIntegrationId || '',
                 extProps.executionTargetName || '',
-                extProps.executionTargetType as ExecutionTargetType,
-                extProps.executionTargetRef || ''
+                executionTargetType || ExecutionTargetType.MANUAL,
+                config
             );
         }
         

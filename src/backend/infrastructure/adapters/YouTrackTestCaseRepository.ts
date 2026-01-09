@@ -265,31 +265,35 @@ export class YouTrackTestCaseRepository implements TestCaseRepository {
         const extProps = (issue as any).extensionProperties || {};
         const testCaseId = extProps.testCaseId || issue.id!;
         
-        // Try to get execution target from custom fields first, fallback to extension properties
+        // Try to get execution target type from custom field first, fallback to extension properties
         let executionTargetType: ExecutionTargetType | undefined;
-        let executionTargetRef: string | undefined;
         
         const customFields = issue.customFields || [];
         const executionTargetTypeField = customFields.find((cf: any) => cf.name === 'Execution Target Type');
-        const executionTargetRefField = customFields.find((cf: any) => cf.name === 'Execution Target Reference');
         
         if (executionTargetTypeField?.value?.name) {
             executionTargetType = this.mapFieldValueToExecutionTargetType(executionTargetTypeField.value.name);
+        } else if (extProps.executionTargetType) {
+            executionTargetType = extProps.executionTargetType as ExecutionTargetType;
         }
-        if (executionTargetRefField?.value) {
-            // Text fields can have value as string directly or as object with text property
-            executionTargetRef = typeof executionTargetRefField.value === 'string' 
-                ? executionTargetRefField.value 
-                : executionTargetRefField.value.text || executionTargetRefField.value;
+        
+        // Get config from extension properties (stored as JSON)
+        let config: any = {};
+        try {
+            if (extProps.executionTargetConfig) {
+                config = JSON.parse(extProps.executionTargetConfig);
+            }
+        } catch (e) {
+            console.warn('[mapIssueToTestCase] Failed to parse execution target config:', e);
         }
         
         let executionTargetSnapshot: ExecutionTargetSnapshot | undefined;
-        if (extProps.executionTargetId || (executionTargetType && executionTargetRef)) {
+        if (extProps.executionTargetIntegrationId || (executionTargetType && config)) {
             executionTargetSnapshot = new ExecutionTargetSnapshot(
-                extProps.executionTargetId || '',
+                extProps.executionTargetIntegrationId || '',
                 extProps.executionTargetName || '',
-                executionTargetType || (extProps.executionTargetType as ExecutionTargetType),
-                executionTargetRef || extProps.executionTargetRef || ''
+                executionTargetType || ExecutionTargetType.MANUAL,
+                config
             );
         }
 
