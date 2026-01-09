@@ -47,6 +47,19 @@ export const projectDemoResSchema = z.object({
   }),
 });
 
+export const settingsReqSchema = z.object({
+  projectId: z.string(),
+});
+
+export const settingsResSchema = z.object({
+  bugReportsProject: z.string().nullable(),
+  testRunsProject: z.string().nullable(),
+  testSuitFieldName: z.string().nullable(),
+  bugIssueCommand: z.string().nullable(),
+  customLinkType: z.string().nullable(),
+  isTestCaseProject: z.boolean(),
+});
+
 export const deleteIntegrationReqSchema = z.object({
   projectId: z.string(),
   id: z.string(),
@@ -161,19 +174,6 @@ export const updateIntegrationResSchema = z.object({
   }),
 });
 
-export const settingsReqSchema = z.object({
-  projectId: z.string(),
-});
-
-export const settingsResSchema = z.object({
-  bugReportsProject: z.string().nullable(),
-  testRunsProject: z.string().nullable(),
-  testSuitFieldName: z.string().nullable(),
-  bugIssueCommand: z.string().nullable(),
-  customLinkType: z.string().nullable(),
-  isTestCaseProject: z.boolean(),
-});
-
 export const getTestRunReqSchema = z.object({
   projectId: z.string().optional(),
   id: z.string().optional(),
@@ -191,10 +191,10 @@ export const getTestRunItemSchema = z.object({
   testSuiteName: z.string(),
   status: z.string(),
   executionTarget: z.object({
-    id: z.string(),
+    integrationId: z.string(),
     name: z.string(),
     type: z.string(),
-    ref: z.string(),
+    config: z.any(),
   }),
 });
 
@@ -473,6 +473,12 @@ export const schema = {
         Res: projectDemoResSchema
       }
     },
+    settings: {
+      GET: {
+        Req: settingsReqSchema,
+        Res: settingsResSchema
+      }
+    },
     integrations: {
       DELETE: {
         Req: deleteIntegrationReqSchema,
@@ -505,12 +511,6 @@ export const schema = {
             }
           }
         }
-      }
-    },
-    settings: {
-      GET: {
-        Req: settingsReqSchema,
-        Res: settingsResSchema
       }
     },
     testRuns: {

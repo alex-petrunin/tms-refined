@@ -112,15 +112,61 @@ export class CIAdapterFactory {
      * Creates a GitLab adapter from integration config
      */
     private createGitLabAdapter(integrationConfig: any): GitLabExecutionAdapter {
+        // Try both field names for token (apiToken or token)
+        const apiToken = integrationConfig.apiToken || integrationConfig.token || '';
+        
+        // Parse projectUrl if it exists (UI sends this)
+        let baseUrl = integrationConfig.baseUrl || 'https://gitlab.com';
+        let projectId = integrationConfig.projectId || '';
+        
+        if (integrationConfig.projectUrl && !projectId) {
+            // Parse URL: https://gitlab.com/tms-app1/integration-1
+            // -> baseUrl: https://gitlab.com
+            // -> projectId: tms-app1/integration-1
+            try {
+                const urlString = integrationConfig.projectUrl;
+                // Find the third slash (after https://)
+                const protocolEnd = urlString.indexOf('://');
+                if (protocolEnd > -1) {
+                    const afterProtocol = urlString.substring(protocolEnd + 3);
+                    const firstSlash = afterProtocol.indexOf('/');
+                    
+                    if (firstSlash > -1) {
+                        baseUrl = urlString.substring(0, protocolEnd + 3 + firstSlash);
+                        projectId = afterProtocol.substring(firstSlash + 1);
+                    } else {
+                        // No path, just domain
+                        baseUrl = urlString;
+                    }
+                }
+                
+                console.log('[CIAdapterFactory] Parsed projectUrl:', {
+                    original: integrationConfig.projectUrl,
+                    baseUrl: baseUrl,
+                    projectId: projectId
+                });
+            } catch (e) {
+                console.error('[CIAdapterFactory] Failed to parse projectUrl:', e);
+            }
+        }
+        
         const gitlabConfig: GitLabConfig = {
-            baseUrl: integrationConfig.baseUrl || 'https://gitlab.com',
-            apiToken: integrationConfig.token || '',
-            projectId: integrationConfig.projectId || ''
+            baseUrl: baseUrl,
+            apiToken: apiToken,
+            projectId: projectId
         };
+
+        console.log('[CIAdapterFactory] GitLab config details:', {
+            baseUrl: gitlabConfig.baseUrl,
+            hasToken: !!gitlabConfig.apiToken,
+            tokenLength: gitlabConfig.apiToken?.length || 0,
+            projectId: gitlabConfig.projectId
+        });
 
         if (!gitlabConfig.apiToken || !gitlabConfig.projectId) {
             throw new Error(
-                'GitLab integration is missing required configuration: apiToken and projectId are required'
+                `GitLab integration is missing required configuration. ` +
+                `Has token: ${!!apiToken}, Has projectId: ${!!projectId}, projectUrl: ${integrationConfig.projectUrl || 'none'}`
             );
         }
 

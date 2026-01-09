@@ -68,12 +68,39 @@ export default function handle(ctx: CtxPut<UpdateIntegrationReq, UpdateIntegrati
 
         // Update the integration
         const existing = integrations[index];
+        
+        // Merge config and parse projectUrl for GitLab
+        let updatedConfig = body.config !== undefined ? { ...existing.config, ...body.config } : existing.config;
+        const integrationType = body.type !== undefined ? body.type : existing.type;
+        
+        if (integrationType === 'GITLAB' && updatedConfig.projectUrl) {
+            try {
+                const urlString = updatedConfig.projectUrl;
+                const protocolEnd = urlString.indexOf('://');
+                if (protocolEnd > -1) {
+                    const afterProtocol = urlString.substring(protocolEnd + 3);
+                    const firstSlash = afterProtocol.indexOf('/');
+                    
+                    if (firstSlash > -1) {
+                        updatedConfig.baseUrl = urlString.substring(0, protocolEnd + 3 + firstSlash);
+                        updatedConfig.projectId = afterProtocol.substring(firstSlash + 1);
+                        console.log('[PUT integrations] Parsed projectUrl:', {
+                            baseUrl: updatedConfig.baseUrl,
+                            projectId: updatedConfig.projectId
+                        });
+                    }
+                }
+            } catch (e) {
+                console.warn('[PUT integrations] Failed to parse projectUrl:', e);
+            }
+        }
+        
         const updated: UpdateIntegrationRes = {
             id: existing.id,
             name: body.name !== undefined ? body.name : existing.name,
-            type: body.type !== undefined ? body.type : existing.type,
+            type: integrationType,
             enabled: body.enabled !== undefined ? body.enabled : existing.enabled,
-            config: body.config !== undefined ? { ...existing.config, ...body.config } : existing.config
+            config: updatedConfig
         };
 
         integrations[index] = updated;

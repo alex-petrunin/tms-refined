@@ -9,9 +9,9 @@ import { TestRunRepository } from "../../application/ports/TestRunRepository";
 export interface GitLabConfig {
     /** GitLab API base URL (e.g., 'https://gitlab.com' or 'https://gitlab.example.com') */
     baseUrl: string;
-    /** GitLab API token with API scope */
+    /** GitLab Pipeline Trigger Token (not API token!) */
     apiToken: string;
-    /** Project ID (numeric or path with namespace, e.g., 'group/project' or '12345') */
+    /** Project ID (numeric like '75214400' or path with namespace like 'group/project') */
     projectId: string;
 }
 
@@ -101,47 +101,59 @@ export class GitLabExecutionAdapter implements ExecutionTriggerPort {
      * @returns Pipeline information
      */
     private async triggerPipeline(ref: string, testRunId: string): Promise<GitLabPipelineResponse> {
-        const url = `${this.config.baseUrl}/api/v4/projects/${encodeURIComponent(this.config.projectId)}/pipeline`;
+        // GitLab Trigger API: POST /projects/:id/trigger/pipeline
+        // Uses pipeline trigger token, not API token!
+        const url = `${this.config.baseUrl}/api/v4/projects/${encodeURIComponent(this.config.projectId)}/trigger/pipeline`;
         
-        const response = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "PRIVATE-TOKEN": this.config.apiToken,
-            },
-            body: JSON.stringify({
-                ref: ref,
-                variables: [
-                    {
-                        key: "TEST_RUN_ID",
-                        value: testRunId,
-                    },
-                ],
-            }),
-        });
-
-        if (!response.ok) {
-            const errorBody = await response.text();
-            let errorMessage = `GitLab API returned ${response.status} ${response.statusText}`;
+        console.log('[GitLabExecutionAdapter] Making request to:', url);
+        console.log('[GitLabExecutionAdapter] Ref:', ref, 'TestRunId:', testRunId);
+        
+        // YouTrack http module format: postSync(path, headers, body)
+        const http = require('@jetbrains/youtrack-scripting-api/http');
+        const connection = new http.Connection(this.config.baseUrl);
+        
+        // Set Content-Type header using addHeader (not in postSync params)
+        connection.addHeader('Content-Type', 'application/x-www-form-urlencoded');
+        
+        // GitLab trigger API path
+        const gitlabApiPath = `/api/v4/projects/${encodeURIComponent(this.config.projectId)}/trigger/pipeline`;
+        
+        // Build form data as curl -F does (multipart/form-data)
+        const formData = [
+            `token=${this.config.apiToken}`,  // Don't encode token
+            `ref=${ref}`,
+            `variables[TEST_RUN_ID]=${testRunId}`
+        ].join('&');
+        
+        console.log('[GitLabExecutionAdapter] Path:', gitlabApiPath);
+        console.log('[GitLabExecutionAdapter] Form data:', formData);
+        
+        const response = connection.postSync(gitlabApiPath, {}, formData);
+        
+        console.log('[GitLabExecutionAdapter] Response status:', response.code);
+        
+        if (response.code !== 200 && response.code !== 201) {
+            let errorMessage = `GitLab API returned ${response.code}`;
             
             try {
-                const errorJson = JSON.parse(errorBody);
+                const errorJson = JSON.parse(response.response);
                 if (errorJson.message) {
                     errorMessage = errorJson.message;
                 } else if (errorJson.error) {
                     errorMessage = errorJson.error;
+                } else {
+                    errorMessage += `: ${response.response}`;
                 }
             } catch {
-                // If parsing fails, use the raw error body if available
-                if (errorBody) {
-                    errorMessage += `: ${errorBody}`;
+                if (response.response) {
+                    errorMessage += `: ${response.response}`;
                 }
             }
             
             throw new Error(errorMessage);
         }
 
-        return await response.json() as GitLabPipelineResponse;
+        return JSON.parse(response.response) as GitLabPipelineResponse;
     }
 }
 

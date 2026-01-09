@@ -75,6 +75,30 @@ export default function handle(ctx: CtxPost<CreateIntegrationReq, CreateIntegrat
         const random = Math.random().toString(36).substring(2, 8);
         const newId = `int_${timestamp}_${random}`;
 
+        // Parse projectUrl to extract baseUrl and projectId for GitLab
+        const config = body.config || {};
+        if (body.type === 'GITLAB' && config.projectUrl) {
+            try {
+                const urlString = config.projectUrl;
+                const protocolEnd = urlString.indexOf('://');
+                if (protocolEnd > -1) {
+                    const afterProtocol = urlString.substring(protocolEnd + 3);
+                    const firstSlash = afterProtocol.indexOf('/');
+                    
+                    if (firstSlash > -1) {
+                        config.baseUrl = urlString.substring(0, protocolEnd + 3 + firstSlash);
+                        config.projectId = afterProtocol.substring(firstSlash + 1);
+                        console.log('[POST integrations] Parsed projectUrl:', {
+                            baseUrl: config.baseUrl,
+                            projectId: config.projectId
+                        });
+                    }
+                }
+            } catch (e) {
+                console.warn('[POST integrations] Failed to parse projectUrl:', e);
+            }
+        }
+        
         // Create new integration
         const newIntegration: CreateIntegrationRes = {
             id: newId,
@@ -82,7 +106,7 @@ export default function handle(ctx: CtxPost<CreateIntegrationReq, CreateIntegrat
             type: body.type,
             enabled: body.enabled,
             isDefault: isDefault,
-            config: body.config || {}
+            config: config
         };
 
         // Add to integrations array
