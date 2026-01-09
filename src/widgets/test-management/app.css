@@ -31,8 +31,10 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: calc(var(--ring-unit) * 2);
-  padding-bottom: calc(var(--ring-unit));
-  border-bottom: 1px solid var(--ring-line-color, #e0e0e0);
+  padding: calc(var(--ring-unit) * 2);
+  background: var(--ring-sidebar-background-color);
+  border-radius: var(--ring-border-radius);
+  border: 1px solid var(--ring-line-color, #e0e0e0);
 }
 
 .view-title {

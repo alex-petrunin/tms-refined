@@ -4,6 +4,7 @@ import { Header, Content } from '@jetbrains/ring-ui-built/components/island/isla
 import Panel from '@jetbrains/ring-ui-built/components/panel/panel';
 import Button from '@jetbrains/ring-ui-built/components/button/button';
 import { Tabs } from '@jetbrains/ring-ui-built/components/tabs/tabs';
+import Tab from '@jetbrains/ring-ui-built/components/tabs/tab';
 import Input from '@jetbrains/ring-ui-built/components/input/input';
 import Loader from '@jetbrains/ring-ui-built/components/loader/loader';
 import { useHost } from '@/widgets/common/hooks/use-host';
@@ -71,11 +72,12 @@ export const TestCaseInspector: React.FC<TestCaseInspectorProps> = memo(({
       setError(null);
 
       try {
+        // @ts-expect-error - API type issue
         const response = await api.project.testCases.GET({
           projectId,
           id: caseId,
           includeExecutionTarget: true,
-        } as any);
+        });
 
         const caseData = 'items' in response ? response.items[0] : response;
 
@@ -297,8 +299,11 @@ export const TestCaseInspector: React.FC<TestCaseInspectorProps> = memo(({
         <Tabs
           selected={activeTab}
           onSelect={(id: string) => setActiveTab(id as TabId)}
-          tabs={tabs}
-        />
+        >
+          {tabs.map(tab => (
+            <Tab key={tab.id} id={tab.id} title={tab.title} />
+          ))}
+        </Tabs>
 
         {renderTabContent()}
       </Content>

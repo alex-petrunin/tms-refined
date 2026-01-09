@@ -4,6 +4,7 @@ import Select from '@jetbrains/ring-ui-built/components/select/select';
 import Dialog from '@jetbrains/ring-ui-built/components/dialog/dialog';
 import {Content, Header} from '@jetbrains/ring-ui-built/components/island/island';
 import Panel from '@jetbrains/ring-ui-built/components/panel/panel';
+import Radio from '@jetbrains/ring-ui-built/components/radio/radio';
 import {ErrorState} from '../shared/ErrorState';
 import {useHost} from '@/widgets/common/hooks/use-host';
 import {createApi} from '@/api';
@@ -208,31 +209,31 @@ export const RunTestCasesDialog = memo<RunTestCasesDialogProps>(({projectId, onC
         
         <div className="form-field">
           <label className="form-label">Execution Mode</label>
-          <div style={{display: 'flex', flexDirection: 'column', gap: 8}}>
+          <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
             <label style={{display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer'}}>
-              <input
-                type="radio"
+              <Radio
                 value="MANAGED"
                 checked={executionMode === 'MANAGED'}
                 onChange={() => setExecutionMode('MANAGED')}
-                style={{marginTop: 3}}
               />
               <div>
-                <div style={{fontWeight: 500}}>Managed</div>
-                <div style={{fontSize: 12, color: '#666'}}>Track test results directly in YouTrack</div>
+                <div style={{fontWeight: 500, marginBottom: 4}}>Managed</div>
+                <div style={{fontSize: 12, color: 'var(--ring-secondary-color)'}}>
+                  Track test results directly in YouTrack
+                </div>
               </div>
             </label>
             <label style={{display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer'}}>
-              <input
-                type="radio"
+              <Radio
                 value="OBSERVED"
                 checked={executionMode === 'OBSERVED'}
                 onChange={() => setExecutionMode('OBSERVED')}
-                style={{marginTop: 3}}
               />
               <div>
-                <div style={{fontWeight: 500}}>Observed</div>
-                <div style={{fontSize: 12, color: '#666'}}>Await results from external CI system</div>
+                <div style={{fontWeight: 500, marginBottom: 4}}>Observed</div>
+                <div style={{fontSize: 12, color: 'var(--ring-secondary-color)'}}>
+                  Await results from external CI system
+                </div>
               </div>
             </label>
           </div>

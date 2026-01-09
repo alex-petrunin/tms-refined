@@ -10,7 +10,6 @@ import {createApi} from '@/api';
 // New imports for hierarchical view
 import {useSuitesWithCases} from '../../hooks/useSuitesWithCases';
 import {useBulkTestCaseActions} from '../../hooks/useBulkTestCaseActions';
-import {useUpdateTestCaseTarget} from '../../hooks/useUpdateTestCaseTarget';
 import {HierarchicalTestSuiteTable} from './HierarchicalTestSuiteTable';
 import {BulkActionsToolbar} from './BulkActionsToolbar';
 import {TestCaseInspector} from './TestCaseInspector';
@@ -25,7 +24,6 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
   const host = useHost();
   const [showForm, setShowForm] = useState(false);
   const [editingSuite, setEditingSuite] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [showRunDialog, setShowRunDialog] = useState(false);
   const [preSelectedSuiteId, setPreSelectedSuiteId] = useState<string | undefined>(undefined);
@@ -78,41 +76,34 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
     setShowForm(true);
   }, []);
 
-  const handleDelete = useCallback(async (suiteId: string, _suiteName: string) => {
-    if (!host || !projectId) return;
-    
-    setDeleting(true);
-    setDeleteError(null);
-    
-    try {
-      const api = createApi(host);
-      const result = await (api.project.testSuites.DELETE as any)({
-        projectId,
-        id: suiteId
-      }) as {success: boolean; message?: string};
-      
-      if (result.success) {
-        refetch();
-      } else {
-        setDeleteError(result.message || 'Failed to delete test suite');
-      }
-    } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'Failed to delete test suite');
-    } finally {
-      setDeleting(false);
-    }
-  }, [host, projectId, refetch]);
+  // TODO: Add delete functionality when needed
+  // const handleDelete = useCallback(async (suiteId: string, _suiteName: string) => {
+  //   if (!host || !projectId) return;
+  //   
+  //   setDeleteError(null);
+  //   
+  //   try {
+  //     const api = createApi(host);
+  //     const result = await (api.project.testSuites.DELETE as any)({
+  //       projectId,
+  //       id: suiteId
+  //     }) as {success: boolean; message?: string};
+  //     
+  //     if (result.success) {
+  //       refetch();
+  //     } else {
+  //       setDeleteError(result.message || 'Failed to delete test suite');
+  //     }
+  //   } catch (err) {
+  //     setDeleteError(err instanceof Error ? err.message : 'Failed to delete test suite');
+  //   }
+  // }, [host, projectId, refetch]);
 
   const handleFormClose = useCallback(() => {
     setShowForm(false);
     setEditingSuite(null);
     refetch();
   }, [refetch]);
-
-  const handleRunSuite = useCallback((suiteId: string) => {
-    setPreSelectedSuiteId(suiteId);
-    setShowRunDialog(true);
-  }, []);
 
   const handleRunDialogClose = useCallback(() => {
     setShowRunDialog(false);
@@ -218,6 +209,42 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
     setAddingCaseToSuiteId(null);
   }, []);
 
+  const handleRunCase = useCallback(async (caseId: string) => {
+    if (!host || !projectId) return;
+    
+    try {
+      const api = createApi(host);
+      
+      // Find the suite and case to get execution target
+      const suiteWithCase = suites.find(s => s.cases.some(c => c.id === caseId));
+      if (!suiteWithCase) {
+        console.error('Could not find suite for test case');
+        return;
+      }
+      
+      const testCase = suiteWithCase.cases.find(c => c.id === caseId);
+      if (!testCase?.executionTarget) {
+        // Show error - no execution target
+        console.error('No execution target set for test case');
+        return;
+      }
+      
+      // Trigger the test run via suite run endpoint with single case
+      await api.project.testSuites._suiteId.run.POST({
+        projectId,
+        suiteID: suiteWithCase.id,
+        testCaseIDs: [caseId],
+        executionMode: 'MANAGED'
+      } as any);
+      
+      // Show success notification
+      console.log(`Test case ${testCase.issueId || caseId} started`);
+      
+    } catch (err) {
+      console.error('Failed to run test case:', err);
+    }
+  }, [host, projectId, suites]);
+
   if (loading && suites.length === 0) {
     return <LoadingState message="Loading test suites..." />;
   }
@@ -280,7 +307,7 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
         onToggleExpand={handleToggleExpand}
         onSelectCase={handleSelectCase}
         onCaseClick={handleCaseClick}
-        onRunSuite={handleRunSuite}
+        onRunCase={handleRunCase}
         onEditSuite={handleEdit}
         onCreateSuite={handleCreate}
         onAddCase={handleAddCase}

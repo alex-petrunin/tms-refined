@@ -22,11 +22,11 @@
   display: grid;
   grid-template-columns: 
     40px        /* Checkbox/Expand */
-    minmax(200px, 2fr)  /* Name/ID */
-    minmax(150px, 2fr)  /* Description */
-    180px       /* Execution Target */
-    80px        /* Last Status */
-    160px;      /* Actions */
+    minmax(250px, 3fr)  /* Name/ID - wider for suite name+description */
+    minmax(200px, 2fr)  /* Summary/Description */
+    200px       /* Execution Target - wider for better readability */
+    60px        /* Status */
+    140px;      /* Actions */
   align-items: center;
   gap: 12px;
   padding: 0 12px;
@@ -48,10 +48,15 @@
   background-color: var(--ring-sidebar-background-color);
   min-height: 48px;
   cursor: pointer;
+  user-select: none;
 }
 
 .suite-row:hover {
   background-color: var(--ring-hover-background-color);
+}
+
+.suite-row:active {
+  background-color: var(--ring-selected-background-color);
 }
 
 /* Case row styling with indentation */
@@ -62,7 +67,8 @@
 
 /* Indentation for nested case rows */
 .case-row .table-cell:first-child {
-  padding-left: 24px; /* Indent for nested appearance */
+  padding-left: 0; /* Remove indent, checkbox should align with expand icon */
+  justify-content: center;
 }
 
 .case-row:hover {
@@ -155,14 +161,15 @@
 
 /* Execution target cell - inline dropdown */
 .execution-target-cell {
-  padding: 0;
+  padding: 4px 0;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
 .execution-target-cell .ring-select {
   width: 100%;
-  min-width: 160px;
+  min-width: 180px;
 }
 
 /* Action buttons */
@@ -171,12 +178,19 @@
   gap: 8px;
   align-items: center;
   justify-content: flex-end;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.table-row:hover .action-buttons {
+  opacity: 1;
 }
 
 .action-buttons .ring-button {
   min-width: auto;
-  padding: 4px 8px;
+  padding: 4px 12px;
   font-size: 13px;
+  height: 28px;
 }
 
 /* Checkbox styling */
@@ -184,12 +198,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-}
-
-.table-checkbox input[type="checkbox"] {
   cursor: pointer;
 }
 
@@ -279,6 +287,26 @@
   color: var(--ring-link-hover-color);
 }
 
+/* Suite info cell - combines name and description */
+.suite-info {
+  flex-direction: column;
+  align-items: flex-start !important;
+  gap: 4px;
+}
+
+.suite-name-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.suite-description {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ring-secondary-color);
+  line-height: 1.4;
+}
+
 /* Suite name */
 .suite-name {
   display: flex;
@@ -292,6 +320,11 @@
   font-size: 12px;
   font-weight: 400;
   margin-left: 8px;
+}
+
+/* Add case button in suite row */
+.suite-row .action-buttons {
+  opacity: 1 !important; /* Always visible unlike case actions */
 }
 
 /* Description truncation */

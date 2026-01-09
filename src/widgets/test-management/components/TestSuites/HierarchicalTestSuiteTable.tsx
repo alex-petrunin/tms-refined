@@ -1,5 +1,6 @@
 import React, { memo, useCallback, useState, useMemo } from 'react';
 import Button from '@jetbrains/ring-ui-built/components/button/button';
+import Checkbox from '@jetbrains/ring-ui-built/components/checkbox/checkbox';
 import { ExecutionTargetCell } from './ExecutionTargetCell';
 import { InlineTestCaseCreator } from './InlineTestCaseCreator';
 import './hierarchical-table.css';
@@ -36,7 +37,6 @@ interface HierarchicalTestSuiteTableProps {
   onToggleExpand: (suiteId: string) => void;
   onSelectCase: (caseId: string, selected: boolean) => void;
   onCaseClick?: (caseId: string) => void;
-  onRunSuite?: (suiteId: string) => void;
   onRunCase?: (caseId: string) => void;
   onEditSuite?: (suiteId: string) => void;
   onEditCase?: (caseId: string) => void;
@@ -62,13 +62,13 @@ const TableHeader: React.FC = memo(() => {
           Name/ID
         </div>
         <div className="table-cell" role="columnheader">
-          Description
+          Summary/Description
         </div>
         <div className="table-cell" role="columnheader">
           Execution Target
         </div>
         <div className="table-cell" role="columnheader">
-          Status
+          Last Status
         </div>
         <div className="table-cell" role="columnheader">
           Actions
@@ -96,7 +96,7 @@ interface SuiteRowProps {
   suite: SuiteWithCases;
   expanded: boolean;
   onToggleExpand: () => void;
-  onRunSuite?: () => void;
+  onAddCase?: () => void;
   onEditSuite?: () => void;
 }
 
@@ -104,7 +104,7 @@ const SuiteRow: React.FC<SuiteRowProps> = memo(({
   suite,
   expanded,
   onToggleExpand,
-  onRunSuite,
+  onAddCase,
   onEditSuite,
 }) => {
   return (
@@ -119,30 +119,30 @@ const SuiteRow: React.FC<SuiteRowProps> = memo(({
       <div className="table-cell" role="cell">
         <ChevronIcon expanded={expanded} />
       </div>
-      <div className="table-cell" role="cell">
-        <div className="suite-name">
-          {suite.name}
-          <span className="suite-case-count">({suite.testCaseCount} cases)</span>
+      <div className="table-cell suite-info" role="cell">
+        <div className="suite-name-wrapper">
+          <div className="suite-name">
+            {suite.name}
+            <span className="suite-case-count">({suite.testCaseCount} cases)</span>
+          </div>
+          {suite.description && (
+            <div className="suite-description">{suite.description}</div>
+          )}
         </div>
-      </div>
-      <div className="table-cell table-description" role="cell" title={suite.description}>
-        {suite.description || '-'}
       </div>
       <div className="table-cell" role="cell">
         {/* Empty for suite row */}
       </div>
       <div className="table-cell" role="cell">
-        {/* Status placeholder */}
+        {/* Empty for suite row */}
+      </div>
+      <div className="table-cell" role="cell">
+        {/* Empty for suite row */}
       </div>
       <div className="table-cell action-buttons" role="cell" onClick={(e) => e.stopPropagation()}>
-        {onRunSuite && (
-          <Button onClick={onRunSuite}>
-            Run Suite
-          </Button>
-        )}
-        {onEditSuite && (
-          <Button onClick={onEditSuite}>
-            Edit
+        {onAddCase && (
+          <Button onClick={onAddCase}>
+            + Add Case
           </Button>
         )}
       </div>
@@ -176,9 +176,8 @@ const CaseRow: React.FC<CaseRowProps> = memo(({
   onUpdateTarget,
   enableTargetEdit = true,
 }) => {
-  const handleCheckboxChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    e.stopPropagation();
-    onSelect(e.target.checked);
+  const handleCheckboxChange = useCallback((checked: boolean) => {
+    onSelect(checked);
   }, [onSelect]);
 
   const handleRowClick = useCallback(() => {
@@ -201,9 +200,7 @@ const CaseRow: React.FC<CaseRowProps> = memo(({
       data-case-id={testCase.id}
     >
       <div className="table-cell" role="cell" onClick={(e) => e.stopPropagation()}>
-        <input
-          type="checkbox"
-          className="table-checkbox"
+        <Checkbox
           checked={selected}
           onChange={handleCheckboxChange}
           aria-label={`Select ${testCase.summary}`}
@@ -243,20 +240,20 @@ const CaseRow: React.FC<CaseRowProps> = memo(({
       </div>
       <div className="table-cell" role="cell">
         {/* Status icon placeholder */}
-        <div className="status-icon pending">
-          <svg viewBox="0 0 16 16" fill="currentColor">
+        <div className="status-icon pending" title="Pending">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
             <circle cx="8" cy="8" r="6" />
           </svg>
         </div>
       </div>
       <div className="table-cell action-buttons" role="cell" onClick={(e) => e.stopPropagation()}>
         {onRunCase && (
-          <Button onClick={onRunCase}>
+          <Button onClick={onRunCase} title="Run test case">
             Run
           </Button>
         )}
         {onEditCase && (
-          <Button onClick={onEditCase}>
+          <Button onClick={onEditCase} title="Edit test case">
             Edit
           </Button>
         )}
@@ -284,7 +281,6 @@ export const HierarchicalTestSuiteTable: React.FC<HierarchicalTestSuiteTableProp
   onToggleExpand,
   onSelectCase,
   onCaseClick,
-  onRunSuite,
   onRunCase,
   onEditSuite,
   onEditCase,
@@ -335,7 +331,7 @@ export const HierarchicalTestSuiteTable: React.FC<HierarchicalTestSuiteTableProp
                 suite={suite}
                 expanded={isExpanded}
                 onToggleExpand={() => onToggleExpand(suite.id)}
-                onRunSuite={onRunSuite ? () => onRunSuite(suite.id) : undefined}
+                onAddCase={onAddCase ? () => onAddCase(suite.id) : undefined}
                 onEditSuite={onEditSuite ? () => onEditSuite(suite.id) : undefined}
               />
               

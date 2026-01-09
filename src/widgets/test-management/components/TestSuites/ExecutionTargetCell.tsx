@@ -148,16 +148,15 @@ export const ExecutionTargetCell: React.FC<ExecutionTargetCellProps> = memo(({
   }
 
   return (
-    <div className="execution-target-cell" onClick={(e) => e.stopPropagation()}>
+    <div className="execution-target-cell" onClick={(e) => e.stopPropagation()} style={{ minWidth: '180px' }}>
       <Select
         data={selectOptions}
         selected={selectedOption}
         onChange={handleChange}
         filter
-        clear
         disabled={disabled}
         placeholder="Not set"
-        size={Select.Size.S}
+        size={Select.Size.M}
       />
     </div>
   );
