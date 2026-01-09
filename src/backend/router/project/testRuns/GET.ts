@@ -23,10 +23,10 @@ export type GetTestRunItem = {
     testSuiteName: string;
     status: string;
     executionTarget: {
-        id: string;
+        integrationId: string;
         name: string;
         type: string;
-        ref: string;
+        config: any;  // Provider-specific config
     };
 };
 
@@ -125,10 +125,10 @@ export default function handle(ctx: CtxGet<ListTestRunsRes, GetTestRunReq>): voi
                 testSuiteName: suiteMap[testRun.testSuiteID] || testRun.testSuiteID,
                 status: testRun.status,
                 executionTarget: {
-                    id: testRun.executionTarget.id,
+                    integrationId: testRun.executionTarget.integrationId,
                     name: testRun.executionTarget.name,
                     type: testRun.executionTarget.type,
-                    ref: testRun.executionTarget.ref
+                    config: testRun.executionTarget.config
                 }
             }];
         } else {
@@ -158,10 +158,10 @@ export default function handle(ctx: CtxGet<ListTestRunsRes, GetTestRunReq>): voi
                     testSuiteName: suiteMap[testRun.testSuiteID] || testRun.testSuiteID,
                     status: testRun.status,
                     executionTarget: {
-                        id: testRun.executionTarget.id,
+                        integrationId: testRun.executionTarget.integrationId,
                         name: testRun.executionTarget.name,
                         type: testRun.executionTarget.type,
-                        ref: testRun.executionTarget.ref
+                        config: testRun.executionTarget.config
                     }
                 }));
         }
