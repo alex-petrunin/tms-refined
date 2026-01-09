@@ -169,11 +169,7 @@ export class YouTrackTestRunRepository implements TestRunRepository {
                 value: { name: this.mapExecutionTargetTypeToFieldValue(testRun.executionTarget.type) },
                 $type: 'SingleEnumIssueCustomField'
             },
-            {
-                name: 'Execution Target Reference',
-                value: testRun.executionTarget.ref,
-                $type: 'TextIssueCustomField'
-            }
+            // Note: Execution target config is stored as JSON in extension properties
         ];
 
         // Add Test Suite field if suite ID is available
@@ -232,7 +228,7 @@ export class YouTrackTestRunRepository implements TestRunRepository {
             issue.fields['TMS Kind'] = entities.TMSKind.TestRun;
             issue.fields['Test Run Status'] = entities.TestRunStatus[this.mapTestStatusToFieldValue(testRun.status)];
             issue.fields['Execution Target Type'] = entities.ExecutionTargetType[this.mapExecutionTargetTypeToFieldValue(testRun.executionTarget.type)];
-            issue.fields['Execution Target Reference'] = testRun.executionTarget.ref;
+            // Note: Execution target config is stored as JSON in extension properties
             
             // Set Execution Target Name if field exists
             try {
@@ -280,11 +276,7 @@ export class YouTrackTestRunRepository implements TestRunRepository {
                 value: { name: this.mapExecutionTargetTypeToFieldValue(testRun.executionTarget.type) },
                 $type: 'SingleEnumIssueCustomField'
             },
-            {
-                name: 'Execution Target Reference',
-                value: testRun.executionTarget.ref,
-                $type: 'TextIssueCustomField'
-            }
+            // Note: Execution target config is stored as JSON in extension properties
         ];
         
         // Add Execution Target Name if available
@@ -341,7 +333,7 @@ export class YouTrackTestRunRepository implements TestRunRepository {
                 issue.fields['TMS Kind'] = entities.TMSKind.TestRun;
                 issue.fields['Test Run Status'] = entities.TestRunStatus[this.mapTestStatusToFieldValue(testRun.status)];
                 issue.fields['Execution Target Type'] = entities.ExecutionTargetType[this.mapExecutionTargetTypeToFieldValue(testRun.executionTarget.type)];
-                issue.fields['Execution Target Reference'] = testRun.executionTarget.ref;
+                // Note: Execution target config is stored as JSON in extension properties
                 if (testRun.testSuiteID) {
                     issue.fields['Test Suite'] = entities.TestSuite[testRun.testSuiteID];
                 }

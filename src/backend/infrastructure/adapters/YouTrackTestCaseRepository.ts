@@ -102,18 +102,12 @@ export class YouTrackTestCaseRepository implements TestCaseRepository {
         ];
 
         if (testCase.executionTargetSnapshot) {
-            customFields.push(
-                {
-                    name: 'Execution Target Type',
-                    value: { name: this.mapExecutionTargetTypeToFieldValue(testCase.executionTargetSnapshot.type) },
-                    $type: 'SingleEnumIssueCustomField'
-                },
-                {
-                    name: 'Execution Target Reference',
-                    value: testCase.executionTargetSnapshot.ref,
-                    $type: 'TextIssueCustomField'
-                }
-            );
+            customFields.push({
+                name: 'Execution Target Type',
+                value: { name: this.mapExecutionTargetTypeToFieldValue(testCase.executionTargetSnapshot.type) },
+                $type: 'SingleEnumIssueCustomField'
+            });
+            // Note: Execution target config is stored as JSON in extension properties
         }
 
         // Prepare issue with extension properties and custom fields
@@ -125,10 +119,10 @@ export class YouTrackTestCaseRepository implements TestCaseRepository {
                 testCaseSummary: testCase.summary,
                 testCaseDescription: testCase.description,
                 ...(testCase.executionTargetSnapshot ? {
-                    executionTargetId: testCase.executionTargetSnapshot.id,
+                    executionTargetIntegrationId: testCase.executionTargetSnapshot.integrationId,
                     executionTargetName: testCase.executionTargetSnapshot.name,
                     executionTargetType: testCase.executionTargetSnapshot.type,
-                    executionTargetRef: testCase.executionTargetSnapshot.ref,
+                    executionTargetConfig: JSON.stringify(testCase.executionTargetSnapshot.config),
                 } : {})
             }
         };
@@ -155,7 +149,7 @@ export class YouTrackTestCaseRepository implements TestCaseRepository {
             issue.fields['TMS Kind'] = entities.TMSKind.TestCase;
             if (testCase.executionTargetSnapshot) {
                 issue.fields['Execution Target Type'] = entities.ExecutionTargetType[this.mapExecutionTargetTypeToFieldValue(testCase.executionTargetSnapshot.type)];
-                issue.fields['Execution Target Reference'] = testCase.executionTargetSnapshot.ref;
+                // Note: Execution target config is stored as JSON in extension properties
             }
             
             // Set extension properties
@@ -163,10 +157,10 @@ export class YouTrackTestCaseRepository implements TestCaseRepository {
             issue.extensionProperties.testCaseSummary = testCase.summary;
             issue.extensionProperties.testCaseDescription = testCase.description;
             if (testCase.executionTargetSnapshot) {
-                issue.extensionProperties.executionTargetId = testCase.executionTargetSnapshot.id;
+                issue.extensionProperties.executionTargetIntegrationId = testCase.executionTargetSnapshot.integrationId;
                 issue.extensionProperties.executionTargetName = testCase.executionTargetSnapshot.name;
                 issue.extensionProperties.executionTargetType = testCase.executionTargetSnapshot.type;
-                issue.extensionProperties.executionTargetRef = testCase.executionTargetSnapshot.ref;
+                issue.extensionProperties.executionTargetConfig = JSON.stringify(testCase.executionTargetSnapshot.config);
             }
             return {
                 id: issue.id,
@@ -191,18 +185,12 @@ export class YouTrackTestCaseRepository implements TestCaseRepository {
         ];
 
         if (testCase.executionTargetSnapshot) {
-            customFields.push(
-                {
-                    name: 'Execution Target Type',
-                    value: { name: this.mapExecutionTargetTypeToFieldValue(testCase.executionTargetSnapshot.type) },
-                    $type: 'SingleEnumIssueCustomField'
-                },
-                {
-                    name: 'Execution Target Reference',
-                    value: testCase.executionTargetSnapshot.ref,
-                    $type: 'TextIssueCustomField'
-                }
-            );
+            customFields.push({
+                name: 'Execution Target Type',
+                value: { name: this.mapExecutionTargetTypeToFieldValue(testCase.executionTargetSnapshot.type) },
+                $type: 'SingleEnumIssueCustomField'
+            });
+            // Note: Execution target config is stored as JSON in extension properties
         }
 
         const payload: any = {
@@ -213,10 +201,10 @@ export class YouTrackTestCaseRepository implements TestCaseRepository {
                 testCaseSummary: testCase.summary,
                 testCaseDescription: testCase.description,
                 ...(testCase.executionTargetSnapshot ? {
-                    executionTargetId: testCase.executionTargetSnapshot.id,
+                    executionTargetIntegrationId: testCase.executionTargetSnapshot.integrationId,
                     executionTargetName: testCase.executionTargetSnapshot.name,
                     executionTargetType: testCase.executionTargetSnapshot.type,
-                    executionTargetRef: testCase.executionTargetSnapshot.ref,
+                    executionTargetConfig: JSON.stringify(testCase.executionTargetSnapshot.config),
                 } : {})
             }
         };
@@ -242,7 +230,7 @@ export class YouTrackTestCaseRepository implements TestCaseRepository {
                 issue.fields['TMS Kind'] = entities.TMSKind.TestCase;
                 if (testCase.executionTargetSnapshot) {
                     issue.fields['Execution Target Type'] = entities.ExecutionTargetType[this.mapExecutionTargetTypeToFieldValue(testCase.executionTargetSnapshot.type)];
-                    issue.fields['Execution Target Reference'] = testCase.executionTargetSnapshot.ref;
+                    // Note: Execution target config is stored as JSON in extension properties
                 }
                 
                 // Update extension properties
@@ -250,10 +238,10 @@ export class YouTrackTestCaseRepository implements TestCaseRepository {
                 issue.extensionProperties.testCaseSummary = testCase.summary;
                 issue.extensionProperties.testCaseDescription = testCase.description;
                 if (testCase.executionTargetSnapshot) {
-                    issue.extensionProperties.executionTargetId = testCase.executionTargetSnapshot.id;
+                    issue.extensionProperties.executionTargetIntegrationId = testCase.executionTargetSnapshot.integrationId;
                     issue.extensionProperties.executionTargetName = testCase.executionTargetSnapshot.name;
                     issue.extensionProperties.executionTargetType = testCase.executionTargetSnapshot.type;
-                    issue.extensionProperties.executionTargetRef = testCase.executionTargetSnapshot.ref;
+                    issue.extensionProperties.executionTargetConfig = JSON.stringify(testCase.executionTargetSnapshot.config);
                 }
             }
         } catch (e) {

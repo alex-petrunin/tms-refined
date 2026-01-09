@@ -36,11 +36,7 @@ export const requirements = {
     GitLab: { name: 'GitLab' },
     GitHub: { name: 'GitHub' },
     Manual: { name: 'Manual' }
-  },
-  
-  // Execution target reference (pipeline/workflow ID)
-  ExecutionTargetRef: {
-    type: entities.Field.stringType,
-    name: 'Execution Target Reference'
   }
+  // Note: Execution target config (ref, workflowFile, etc.) is stored as JSON 
+  // in extension properties
 };
