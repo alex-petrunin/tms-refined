@@ -7,12 +7,12 @@ import * as projectintegrationsDELETEHandler from "../backend/router/project/int
 import * as projectintegrationsGETHandler from "../backend/router/project/integrations/GET";
 import * as projectintegrationsPOSTHandler from "../backend/router/project/integrations/POST";
 import * as projectintegrationsPUTHandler from "../backend/router/project/integrations/PUT";
-import * as projecttestCasesGETHandler from "../backend/router/project/testCases/GET";
-import * as projecttestCasesPOSTHandler from "../backend/router/project/testCases/POST";
-import * as projecttestCasesPUTHandler from "../backend/router/project/testCases/PUT";
 import * as projectsettingsGETHandler from "../backend/router/project/settings/GET";
 import * as projecttestRunsGETHandler from "../backend/router/project/testRuns/GET";
 import * as projecttestRunsPOSTHandler from "../backend/router/project/testRuns/POST";
+import * as projecttestCasesGETHandler from "../backend/router/project/testCases/GET";
+import * as projecttestCasesPOSTHandler from "../backend/router/project/testCases/POST";
+import * as projecttestCasesPUTHandler from "../backend/router/project/testCases/PUT";
 import * as projecttestSuitesDELETEHandler from "../backend/router/project/testSuites/DELETE";
 import * as projecttestSuitesGETHandler from "../backend/router/project/testSuites/GET";
 import * as projecttestSuitesPOSTHandler from "../backend/router/project/testSuites/POST";
@@ -63,11 +63,6 @@ export type ApiRouter = {
     };
     };
     };
-    testCases: {
-    GET: ExtractRPCFromHandler<projecttestCasesGETHandler.Handle>;
-    POST: ExtractRPCFromHandler<projecttestCasesPOSTHandler.Handle>;
-    PUT: ExtractRPCFromHandler<projecttestCasesPUTHandler.Handle>;
-    };
     settings: {
     GET: ExtractRPCFromHandler<projectsettingsGETHandler.Handle>;
     };
@@ -77,6 +72,11 @@ export type ApiRouter = {
     results: {
     POST: ExtractRPCFromHandler<projecttestRunsresultsPOSTHandler.Handle>;
     };
+    };
+    testCases: {
+    GET: ExtractRPCFromHandler<projecttestCasesGETHandler.Handle>;
+    POST: ExtractRPCFromHandler<projecttestCasesPOSTHandler.Handle>;
+    PUT: ExtractRPCFromHandler<projecttestCasesPUTHandler.Handle>;
     };
     testSuites: {
     DELETE: ExtractRPCFromHandler<projecttestSuitesDELETEHandler.Handle>;

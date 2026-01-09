@@ -140,8 +140,8 @@ export const RunTestCasesDialog = memo<RunTestCasesDialogProps>(({projectId, onC
       if (selectedExecutionTarget.type === 'MANUAL') {
         setExecutionMode('MANAGED');
       } else {
-        // CI integrations typically use OBSERVED mode (awaiting external results)
-        setExecutionMode('OBSERVED');
+        // CI integrations default to MANAGED mode (will trigger pipeline automatically)
+        setExecutionMode('MANAGED');
       }
     }
   }, [selectedExecutionTarget]);
@@ -179,16 +179,19 @@ export const RunTestCasesDialog = memo<RunTestCasesDialogProps>(({projectId, onC
       const api = createApi(host);
       const testCaseIDs = selectedTestCases.map(tc => tc.key);
       
-      await api.project.testRuns.POST({
-        projectId,
-        suiteID: selectedSuite.key,
+      // Use new endpoint: POST /project/testSuites/_suiteId/run
+      await api.project.testSuites._suiteId.run.POST({
+        projectId: projectId,
+        suiteID: selectedSuite.key,  // Suite ID for routing
         testCaseIDs: testCaseIDs,
         executionMode,
         executionTarget: {
-          id: selectedExecutionTarget.key,
+          integrationId: selectedExecutionTarget.key,  // Changed from 'id' to 'integrationId'
           name: selectedExecutionTarget.label.replace(` (${selectedExecutionTarget.type})`, ''),
           type: selectedExecutionTarget.type,
-          ref: selectedExecutionTarget.config?.pipelineRef || ''
+          config: {  // Changed from flat 'ref' to structured 'config'
+            ref: selectedExecutionTarget.config?.pipelineRef || 'main'
+          }
         }
       } as any);
       onClose();
@@ -197,7 +200,7 @@ export const RunTestCasesDialog = memo<RunTestCasesDialogProps>(({projectId, onC
     } finally {
       setLoading(false);
     }
-  }, [host, selectedSuite, selectedTestCases, executionMode, selectedExecutionTarget, projectId, onClose]);
+  }, [host, selectedSuite, selectedTestCases, executionMode, selectedExecutionTarget, onClose]);
 
   return (
     <Dialog

@@ -161,60 +161,6 @@ export const updateIntegrationResSchema = z.object({
   }),
 });
 
-export const getTestCaseReqSchema = z.object({
-  projectId: z.string().optional(),
-  id: z.string().optional(),
-  limit: z.number().optional(),
-  offset: z.number().optional(),
-  search: z.string().optional(),
-  suiteId: z.string().optional(),
-});
-
-export const testCaseItemSchema = z.object({
-  id: z.string(),
-  issueId: z.string().optional(),
-  summary: z.string(),
-  description: z.string(),
-  suiteId: z.string().optional(),
-});
-
-export const getTestCaseResSchema = z.object({
-  items: z.array(testCaseItemSchema),
-  total: z.number(),
-});
-
-export const createTestCaseReqSchema = z.object({
-  projectId: z.string(),
-  summary: z.string(),
-  description: z.string().optional(),
-  suiteId: z.string().optional(),
-});
-
-export const createTestCaseResSchema = z.object({
-  id: z.string(),
-  issueId: z.string(),
-  summary: z.string(),
-  description: z.string(),
-  suiteId: z.string().optional(),
-});
-
-export const updateTestCaseReqSchema = z.object({
-  projectId: z.string(),
-  id: z.string(),
-  issueId: z.string().optional(),
-  summary: z.string().optional(),
-  description: z.string().optional(),
-  suiteId: z.string().optional(),
-});
-
-export const updateTestCaseResSchema = z.object({
-  id: z.string(),
-  issueId: z.string().optional(),
-  summary: z.string(),
-  description: z.string(),
-  suiteId: z.string().optional(),
-});
-
 export const settingsReqSchema = z.object({
   projectId: z.string(),
 });
@@ -288,6 +234,60 @@ export const createTestRunResSchema = z.object({
     type: z.string(),
     ref: z.string(),
   }),
+});
+
+export const getTestCaseReqSchema = z.object({
+  projectId: z.string().optional(),
+  id: z.string().optional(),
+  limit: z.number().optional(),
+  offset: z.number().optional(),
+  search: z.string().optional(),
+  suiteId: z.string().optional(),
+});
+
+export const testCaseItemSchema = z.object({
+  id: z.string(),
+  issueId: z.string().optional(),
+  summary: z.string(),
+  description: z.string(),
+  suiteId: z.string().optional(),
+});
+
+export const getTestCaseResSchema = z.object({
+  items: z.array(testCaseItemSchema),
+  total: z.number(),
+});
+
+export const createTestCaseReqSchema = z.object({
+  projectId: z.string(),
+  summary: z.string(),
+  description: z.string().optional(),
+  suiteId: z.string().optional(),
+});
+
+export const createTestCaseResSchema = z.object({
+  id: z.string(),
+  issueId: z.string(),
+  summary: z.string(),
+  description: z.string(),
+  suiteId: z.string().optional(),
+});
+
+export const updateTestCaseReqSchema = z.object({
+  projectId: z.string(),
+  id: z.string(),
+  issueId: z.string().optional(),
+  summary: z.string().optional(),
+  description: z.string().optional(),
+  suiteId: z.string().optional(),
+});
+
+export const updateTestCaseResSchema = z.object({
+  id: z.string(),
+  issueId: z.string().optional(),
+  summary: z.string(),
+  description: z.string(),
+  suiteId: z.string().optional(),
 });
 
 export const deleteTestSuiteReqSchema = z.object({
@@ -393,7 +393,7 @@ export const tMSQueryResSchema = z.object({
   ),
 });
 
-export const executionTargetReqSchema = z.object({
+export const executionTargetDetailsSchema = z.object({
   integrationId: z.string(),
   name: z.string(),
   type: z.union([
@@ -408,11 +408,13 @@ export const executionTargetReqSchema = z.object({
 });
 
 export const runTestSuiteReqSchema = z.object({
+  projectId: z.string(),
+  suiteID: z.string(),
   testCaseIDs: z.array(z.string()),
   executionMode: z
     .union([z.literal("MANAGED"), z.literal("OBSERVED")])
     .optional(),
-  executionTarget: executionTargetReqSchema,
+  executionTarget: executionTargetDetailsSchema,
 });
 
 export const runTestSuiteResSchema = z.object({
@@ -505,20 +507,6 @@ export const schema = {
         }
       }
     },
-    testCases: {
-      GET: {
-        Req: getTestCaseReqSchema,
-        Res: getTestCaseResSchema
-      },
-      POST: {
-        Req: createTestCaseReqSchema,
-        Res: createTestCaseResSchema
-      },
-      PUT: {
-        Req: updateTestCaseReqSchema,
-        Res: updateTestCaseResSchema
-      }
-    },
     settings: {
       GET: {
         Req: settingsReqSchema,
@@ -541,6 +529,20 @@ export const schema = {
         }
       }
     },
+    testCases: {
+      GET: {
+        Req: getTestCaseReqSchema,
+        Res: getTestCaseResSchema
+      },
+      POST: {
+        Req: createTestCaseReqSchema,
+        Res: createTestCaseResSchema
+      },
+      PUT: {
+        Req: updateTestCaseReqSchema,
+        Res: updateTestCaseResSchema
+      }
+    },
     testSuites: {
       DELETE: {
         Req: deleteTestSuiteReqSchema,
@@ -561,7 +563,7 @@ export const schema = {
       _suiteId: {
         run: {
           POST: {
-            Req: executionTargetReqSchema,
+            Req: runTestSuiteReqSchema,
             Res: runTestSuiteResSchema
           }
         }

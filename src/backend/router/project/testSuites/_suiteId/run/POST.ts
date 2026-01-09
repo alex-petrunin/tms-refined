@@ -10,7 +10,7 @@ import { ExecutionModeType } from "../../../../../domain/valueObjects/ExecutionM
 /**
  * @zod-to-schema
  */
-export type ExecutionTargetReq = {
+export type ExecutionTargetDetails = {
     integrationId: string;
     name: string;
     type: 'GITLAB' | 'GITHUB' | 'MANUAL';
@@ -24,9 +24,11 @@ export type ExecutionTargetReq = {
  * @zod-to-schema
  */
 export type RunTestSuiteReq = {
+    projectId: string;
+    suiteID: string;  // Suite ID - can be from path or body
     testCaseIDs: string[];
     executionMode?: 'MANAGED' | 'OBSERVED';
-    executionTarget: ExecutionTargetReq;
+    executionTarget: ExecutionTargetDetails;
 };
 
 /**
@@ -43,12 +45,14 @@ export type RunTestSuiteRes = {
  * RunTestCasesUseCase → DynamicExecutionTrigger → CIAdapterFactory → Provider Adapter → CI API
  */
 export default async function handle(ctx: CtxPost<RunTestSuiteReq, RunTestSuiteRes>): Promise<void> {
+    const body = ctx.request.json() as RunTestSuiteReq;
+    
+    // Get suite ID from path or body
     const pathParts = ctx.request.path.split('/');
     const suiteIdIndex = pathParts.indexOf('testSuites') + 1;
-    const suiteId = pathParts[suiteIdIndex];
+    const suiteId = pathParts[suiteIdIndex] || body.suiteID;
     
     const projectKey = ctx.project.shortName || ctx.project.key;
-    const body = ctx.request.json() as RunTestSuiteReq;
 
     console.log('[POST testSuites/run] Running tests:', {
         suiteId,
