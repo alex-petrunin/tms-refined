@@ -152,3 +152,77 @@ export function useIntegrations(
   };
 }
 
+/**
+ * Interface for execution target dropdown options
+ */
+export interface ExecutionTargetOption {
+  key: string; // integrationId
+  label: string; // e.g., "Manual: QA Team" or "GitLab CI: Staging"
+  type: 'MANUAL' | 'GITLAB' | 'GITHUB';
+  integration: Integration;
+}
+
+/**
+ * Helper function to format integrations for RingUI Select dropdown
+ * Returns options in format: {key: integrationId, label: "GitLab CI: Staging", type: "GITLAB"}
+ * Only includes enabled integrations by default
+ */
+export function formatIntegrationsForSelect(
+  integrations: Integration[],
+  includeDisabled = false
+): ExecutionTargetOption[] {
+  return integrations
+    .filter(integration => includeDisabled || integration.enabled)
+    .map(integration => {
+      const typeLabel = getIntegrationTypeLabel(integration.type);
+      return {
+        key: integration.id,
+        label: `${typeLabel}: ${integration.name}`,
+        type: integration.type,
+        integration,
+      };
+    })
+    .sort((a, b) => {
+      // Sort by type first (Manual, then GitLab, then GitHub), then by name
+      const typeOrder = { MANUAL: 0, GITLAB: 1, GITHUB: 2 };
+      const typeCompare = typeOrder[a.type] - typeOrder[b.type];
+      if (typeCompare !== 0) return typeCompare;
+      return a.label.localeCompare(b.label);
+    });
+}
+
+/**
+ * Get human-readable label for integration type
+ */
+function getIntegrationTypeLabel(type: Integration['type']): string {
+  switch (type) {
+    case 'MANUAL':
+      return 'Manual';
+    case 'GITLAB':
+      return 'GitLab CI';
+    case 'GITHUB':
+      return 'GitHub Actions';
+    default:
+      return type;
+  }
+}
+
+/**
+ * Hook specifically for fetching integrations formatted as Select options
+ */
+export function useIntegrationOptions(projectId?: string, includeDisabled = false) {
+  const { integrations, loading, error, refetch } = useIntegrations({
+    projectId,
+    enabled: includeDisabled ? undefined : true,
+  });
+
+  const options = formatIntegrationsForSelect(integrations, includeDisabled);
+
+  return {
+    options,
+    loading,
+    error,
+    refetch,
+  };
+}
+

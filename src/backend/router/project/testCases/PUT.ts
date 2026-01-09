@@ -1,5 +1,17 @@
 import { UpdateTestCaseSyncUseCase } from "../../../application/usecases/UpdateTestCaseSync";
 import { YouTrackTestCaseRepositorySync } from "../../../infrastructure/adapters/YouTrackTestCaseRepositorySync";
+import { ExecutionTargetSnapshot } from "../../../domain/valueObjects/ExecutionTarget";
+import { ExecutionTargetType } from "../../../domain/enums/ExecutionTargetType";
+
+/**
+ * @zod-to-schema
+ */
+export type ExecutionTargetInput = {
+    integrationId: string;
+    name: string;
+    type: string;
+    config: Record<string, any>;
+};
 
 /**
  * @zod-to-schema
@@ -11,6 +23,7 @@ export type UpdateTestCaseReq = {
     summary?: string;
     description?: string;
     suiteId?: string;
+    executionTarget?: ExecutionTargetInput | null;
 };
 
 /**
@@ -22,6 +35,7 @@ export type UpdateTestCaseRes = {
     summary: string;
     description: string;
     suiteId?: string;
+    executionTarget?: ExecutionTargetInput;
 };
 
 /**
@@ -160,6 +174,46 @@ export default function handle(ctx: CtxPut<UpdateTestCaseReq, UpdateTestCaseRes>
             return;
         }
 
+        // Validate execution target if provided
+        let executionTargetSnapshot: ExecutionTargetSnapshot | undefined;
+        if (body.executionTarget) {
+            // Load integrations to validate
+            let integrations: any[] = [];
+            try {
+                const integrationsJson = ytProject.extensionProperties.integrations;
+                if (integrationsJson && typeof integrationsJson === 'string') {
+                    integrations = JSON.parse(integrationsJson);
+                }
+            } catch (e) {
+                console.warn('Failed to parse integrations:', e);
+            }
+
+            // Find the integration
+            const integration = integrations.find(i => i.id === body.executionTarget?.integrationId);
+            if (!integration) {
+                ctx.response.code = 400;
+                ctx.response.json({ error: `Integration not found: ${body.executionTarget.integrationId}` } as any);
+                return;
+            }
+
+            if (!integration.enabled) {
+                ctx.response.code = 400;
+                ctx.response.json({ error: `Integration is disabled: ${integration.name}` } as any);
+                return;
+            }
+
+            // Create execution target snapshot
+            executionTargetSnapshot = new ExecutionTargetSnapshot(
+                body.executionTarget.integrationId,
+                body.executionTarget.name,
+                body.executionTarget.type as ExecutionTargetType,
+                body.executionTarget.config
+            );
+        } else if (body.executionTarget === null) {
+            // Explicitly clear execution target
+            executionTargetSnapshot = undefined;
+        }
+
         // Initialize repository and use case
         const repository = new YouTrackTestCaseRepositorySync(projectKey, ctx.currentUser);
         const useCase = new UpdateTestCaseSyncUseCase(repository);
@@ -170,7 +224,8 @@ export default function handle(ctx: CtxPut<UpdateTestCaseReq, UpdateTestCaseRes>
         const updatedTestCase = useCase.execute({
             testCaseID: body.id,
             summary: body.summary,
-            description: body.description
+            description: body.description,
+            executionTargetSnapshot: executionTargetSnapshot
         });
 
         // Find the issue for suite management and getting issue ID
@@ -190,6 +245,16 @@ export default function handle(ctx: CtxPut<UpdateTestCaseReq, UpdateTestCaseRes>
             description: updatedTestCase.description,
             suiteId: issue?.extensionProperties?.suiteId || body.suiteId
         };
+
+        // Include execution target in response if it exists
+        if (updatedTestCase.executionTargetSnapshot) {
+            response.executionTarget = {
+                integrationId: updatedTestCase.executionTargetSnapshot.integrationId,
+                name: updatedTestCase.executionTargetSnapshot.name,
+                type: updatedTestCase.executionTargetSnapshot.type,
+                config: updatedTestCase.executionTargetSnapshot.config
+            };
+        }
 
         ctx.response.json(response);
     } catch (error: any) {

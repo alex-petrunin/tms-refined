@@ -1,14 +1,21 @@
-import {memo, useState, useCallback} from 'react';
-import {useTestSuites} from '../../hooks/useTestSuites';
+import {memo, useState, useCallback, useMemo} from 'react';
 import {LoadingState} from '../shared/LoadingState';
 import {ErrorState} from '../shared/ErrorState';
-import {EmptyState} from '../shared/EmptyState';
-import {TestSuiteList} from './TestSuiteList';
 import {TestSuiteForm} from './TestSuiteForm';
 import {RunTestCasesDialog} from '../TestRuns/RunTestCasesDialog';
 import Button from '@jetbrains/ring-ui-built/components/button/button';
 import {useHost} from '@/widgets/common/hooks/use-host';
 import {createApi} from '@/api';
+
+// New imports for hierarchical view
+import {useSuitesWithCases} from '../../hooks/useSuitesWithCases';
+import {useBulkTestCaseActions} from '../../hooks/useBulkTestCaseActions';
+import {useUpdateTestCaseTarget} from '../../hooks/useUpdateTestCaseTarget';
+import {HierarchicalTestSuiteTable} from './HierarchicalTestSuiteTable';
+import {BulkActionsToolbar} from './BulkActionsToolbar';
+import {TestCaseInspector} from './TestCaseInspector';
+import {HierarchicalSearch, filterSuitesTreeAware} from './HierarchicalSearch';
+import {ActiveRunsPanel} from './ActiveRunsPanel';
 
 interface TestSuitesViewProps {
   projectId?: string;
@@ -23,12 +30,43 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
   const [showRunDialog, setShowRunDialog] = useState(false);
   const [preSelectedSuiteId, setPreSelectedSuiteId] = useState<string | undefined>(undefined);
 
+  // Hierarchical view state
+  const [expandedSuiteIds, setExpandedSuiteIds] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [inspectorState, setInspectorState] = useState<{
+    open: boolean;
+    caseId: string | null;
+  }>({ open: false, caseId: null });
+  const [activeRuns, setActiveRuns] = useState<any[]>([]);
+  const [addingCaseToSuiteId, setAddingCaseToSuiteId] = useState<string | null>(null);
+
   console.log(projectId);
   
-  const {testSuites, total, loading, error, refetch} = useTestSuites({
+  // Use the new hierarchical data hook
+  const {suites, loading, error, refetch, loadCasesForSuite} = useSuitesWithCases({
     projectId,
-    limit: 50
+    autoExpandAll: false,
+    includeExecutionTargets: true,
   });
+
+  // Bulk selection logic
+  const {
+    selectedCaseIds,
+    selectCase,
+    deselectCase,
+    clearSelection,
+    selectedCount,
+  } = useBulkTestCaseActions({
+    onRunSelected: () => {
+      // Will be handled by handleBulkRun
+    },
+  });
+
+  // Filter suites based on search query
+  const filteredSuites = useMemo(() => {
+    if (!searchQuery) return suites;
+    return filterSuitesTreeAware(suites as any, searchQuery) as typeof suites;
+  }, [suites, searchQuery]);
 
   const handleCreate = useCallback(() => {
     setEditingSuite(null);
@@ -48,7 +86,6 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
     
     try {
       const api = createApi(host);
-      // Cast to any to avoid type inference issues with DELETE method
       const result = await (api.project.testSuites.DELETE as any)({
         projectId,
         id: suiteId
@@ -82,7 +119,95 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
     setPreSelectedSuiteId(undefined);
   }, []);
 
-  if (loading) {
+  // New handlers for hierarchical view
+  const handleToggleExpand = useCallback((suiteId: string) => {
+    setExpandedSuiteIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(suiteId)) {
+        newSet.delete(suiteId);
+      } else {
+        newSet.add(suiteId);
+        // Load cases when expanding a suite
+        loadCasesForSuite(suiteId).catch(err => {
+          console.error('Failed to load cases:', err);
+        });
+      }
+      return newSet;
+    });
+  }, [loadCasesForSuite]);
+
+  const handleSelectCase = useCallback((caseId: string, selected: boolean) => {
+    if (selected) {
+      selectCase(caseId);
+    } else {
+      deselectCase(caseId);
+    }
+  }, [selectCase, deselectCase]);
+
+  const handleCaseClick = useCallback((caseId: string) => {
+    setInspectorState({ open: true, caseId });
+  }, []);
+
+  const handleInspectorClose = useCallback(() => {
+    setInspectorState({ open: false, caseId: null });
+  }, []);
+
+  const handleBulkRun = useCallback(() => {
+    // Open run dialog with selected cases
+    setShowRunDialog(true);
+  }, []);
+
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+  }, []);
+
+  const handleUpdateCaseTarget = useCallback((caseId: string, target: any) => {
+    // The ExecutionTargetCell component handles the actual update
+    // This is just a callback for additional actions if needed
+    console.log('Test case target updated:', caseId, target);
+    refetch();
+  }, [refetch]);
+
+  const handleAddCase = useCallback((suiteId: string) => {
+    // Expand the suite if not already expanded
+    if (!expandedSuiteIds.has(suiteId)) {
+      setExpandedSuiteIds(prev => new Set([...prev, suiteId]));
+    }
+    // Show the inline creator for this suite
+    setAddingCaseToSuiteId(suiteId);
+  }, [expandedSuiteIds]);
+
+  const handleSaveNewCase = useCallback(async (suiteId: string, data: { summary: string; description: string }) => {
+    if (!host || !projectId) return;
+    
+    try {
+      const api = createApi(host);
+      await api.project.testCases.POST({
+        projectId,
+        suiteId,
+        summary: data.summary,
+        description: data.description,
+      } as any);
+      
+      // Hide the inline creator
+      setAddingCaseToSuiteId(null);
+      
+      // Reload cases for this specific suite
+      await loadCasesForSuite(suiteId);
+      
+      // Refresh the suite list to update counts
+      refetch();
+    } catch (err) {
+      console.error('Failed to create test case:', err);
+      throw err; // Let the InlineTestCaseCreator handle the error
+    }
+  }, [host, projectId, refetch, loadCasesForSuite]);
+
+  const handleCancelAddCase = useCallback(() => {
+    setAddingCaseToSuiteId(null);
+  }, []);
+
+  if (loading && suites.length === 0) {
     return <LoadingState message="Loading test suites..." />;
   }
 
@@ -105,14 +230,21 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
       <div className="view-header">
         <div className="view-title">
           <h2>Test Suites</h2>
-          <span className="count-badge">{total}</span>
+          <span className="count-badge">{suites.length}</span>
         </div>
+        <HierarchicalSearch onSearch={handleSearch} />
         <div className="view-actions">
           <Button primary onClick={handleCreate}>
             Create Test Suite
           </Button>
         </div>
       </div>
+      
+      <BulkActionsToolbar
+        selectedCount={selectedCount}
+        onRunSelected={handleBulkRun}
+        onClearSelection={clearSelection}
+      />
       
       {showRunDialog && (
         <RunTestCasesDialog
@@ -129,20 +261,37 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
         </div>
       )}
       
-      {testSuites.length === 0 ? (
-        <EmptyState
-          message="No test suites found"
-          actionLabel="Create Test Suite"
-          onAction={handleCreate}
-        />
-      ) : (
-        <TestSuiteList
-          projectId={projectId || ''}
-          suites={testSuites}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onRunSuite={handleRunSuite}
-          deleting={deleting}
+      <HierarchicalTestSuiteTable
+        projectId={projectId || ''}
+        suites={filteredSuites}
+        expandedSuiteIds={expandedSuiteIds}
+        selectedCaseIds={selectedCaseIds}
+        onToggleExpand={handleToggleExpand}
+        onSelectCase={handleSelectCase}
+        onCaseClick={handleCaseClick}
+        onRunSuite={handleRunSuite}
+        onEditSuite={handleEdit}
+        onCreateSuite={handleCreate}
+        onAddCase={handleAddCase}
+        onUpdateCaseTarget={handleUpdateCaseTarget}
+        addingCaseToSuiteId={addingCaseToSuiteId}
+        onSaveNewCase={handleSaveNewCase}
+        onCancelAddCase={handleCancelAddCase}
+        loading={loading}
+        enableExecutionTargetEdit={true}
+      />
+      
+      <TestCaseInspector
+        caseId={inspectorState.caseId}
+        projectId={projectId || ''}
+        open={inspectorState.open}
+        onClose={handleInspectorClose}
+      />
+      
+      {activeRuns.length > 0 && (
+        <ActiveRunsPanel
+          runs={activeRuns}
+          onClose={() => setActiveRuns([])}
         />
       )}
     </div>

@@ -1,0 +1,114 @@
+/* Inline Test Case Creator */
+.inline-test-case-creator {
+  background: var(--ring-hover-background-color);
+  border-bottom: 1px solid var(--ring-line-color);
+  padding: 8px 12px;
+  animation: slideDown 0.2s ease-out;
+}
+
+.inline-creator-row {
+  display: grid;
+  grid-template-columns: 
+    40px        /* Icon */
+    minmax(200px, 2fr)  /* Summary */
+    minmax(150px, 2fr)  /* Description */
+    180px       /* Execution Target */
+    80px        /* Status */
+    160px;      /* Actions */
+  align-items: center;
+  gap: 12px;
+}
+
+.inline-creator-cell {
+  display: flex;
+  align-items: center;
+}
+
+.inline-creator-input-cell {
+  padding-left: 24px; /* Indentation like case rows */
+}
+
+.inline-creator-input-cell .ring-input {
+  width: 100%;
+}
+
+.inline-creator-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.inline-creator-actions .ring-button {
+  min-width: auto;
+  padding: 4px 12px;
+  font-size: 13px;
+}
+
+.inline-creator-error {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--ring-message-error-background-color);
+  border-left: 3px solid var(--ring-error-color);
+  font-size: 13px;
+}
+
+.inline-creator-help {
+  margin-top: 8px;
+  padding-left: 52px; /* Align with input fields */
+}
+
+/* Animation */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 200px;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .inline-creator-row {
+    min-width: 900px;
+  }
+}
+
+@media (max-width: 768px) {
+  .inline-creator-row {
+    grid-template-columns: 
+      40px 
+      1fr 
+      100px;
+    gap: 8px;
+  }
+  
+  /* Hide description on mobile */
+  .inline-creator-row .inline-creator-cell:nth-child(3) {
+    display: none;
+  }
+  
+  /* Hide execution target on mobile */
+  .inline-creator-row .inline-creator-cell:nth-child(4) {
+    display: none;
+  }
+  
+  /* Hide status on mobile */
+  .inline-creator-row .inline-creator-cell:nth-child(5) {
+    display: none;
+  }
+  
+  .inline-creator-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .inline-creator-actions .ring-button {
+    width: 100%;
+  }
+}
+

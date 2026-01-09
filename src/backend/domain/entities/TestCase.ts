@@ -10,4 +10,10 @@ export class TestCase {
         public executionTargetSnapshot?: ExecutionTargetSnapshot,
     ){}
 
+    /**
+     * Check if this test case has an execution target configured
+     */
+    hasExecutionTarget(): boolean {
+        return this.executionTargetSnapshot !== undefined && this.executionTargetSnapshot !== null;
+    }
 }

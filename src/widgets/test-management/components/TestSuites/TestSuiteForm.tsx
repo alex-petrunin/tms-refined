@@ -1,6 +1,9 @@
 import React, {memo, useState, useEffect, useCallback, useMemo, useRef} from 'react';
 import Button from '@jetbrains/ring-ui-built/components/button/button';
 import {Input, Size} from '@jetbrains/ring-ui-built/components/input/input';
+import Dialog from '@jetbrains/ring-ui-built/components/dialog/dialog';
+import { Header, Content } from '@jetbrains/ring-ui-built/components/island/island';
+import Panel from '@jetbrains/ring-ui-built/components/panel/panel';
 import {LoadingState} from '../shared/LoadingState';
 import {ErrorState} from '../shared/ErrorState';
 import {useHost} from "@/widgets/common/hooks/use-host.tsx";
@@ -73,37 +76,56 @@ export const TestSuiteForm = memo<TestSuiteFormProps>(({suiteId, projectId, onCl
     }
   }, [api, projectId, suiteId, name, description, onClose]);
 
-  if (loading && suiteId) {
-    return <LoadingState message="Loading test suite..." />;
-  }
-
   return (
-    <div className="test-suite-form">
-      <h2>{suiteId ? 'Edit Test Suite' : 'Create Test Suite'}</h2>
-      {error && <ErrorState error={error} />}
-      <div onSubmit={handleSubmit}>
-        <Input
-          label="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          size={Size.FULL}
-        />
-        <Input
-          label="Description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          size={Size.FULL}
-          multiline
-        />
-        <div className="form-actions">
-          <Button onClick={onClose}>Cancel</Button>
-          <Button primary type="button" onClick={handleSubmit} disabled={loading || !name}>
-            {suiteId ? 'Update' : 'Create'}
-          </Button>
-        </div>
-      </div>
-    </div>
+    <Dialog
+      show={true}
+      onCloseAttempt={onClose}
+      trapFocus
+      autoFocusFirst
+    >
+      <Header>
+        {suiteId ? 'Edit Test Suite' : 'Create Test Suite'}
+      </Header>
+
+      <Content>
+        {loading && suiteId ? (
+          <LoadingState message="Loading test suite..." />
+        ) : (
+          <div className="test-suite-form">
+            {error && <ErrorState error={error} />}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <Input
+                label="Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                size={Size.FULL}
+              />
+              <Input
+                label="Description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                size={Size.FULL}
+                multiline
+              />
+            </div>
+          </div>
+        )}
+      </Content>
+
+      <Panel>
+        <Button onClick={onClose} disabled={loading}>
+          Cancel
+        </Button>
+        <Button 
+          primary 
+          onClick={handleSubmit} 
+          disabled={loading || !name}
+        >
+          {loading ? 'Saving...' : (suiteId ? 'Update' : 'Create')}
+        </Button>
+      </Panel>
+    </Dialog>
   );
 });
 

@@ -1,10 +1,12 @@
 import { TestCaseRepositorySync } from "../ports/TestCaseRepositorySync";
 import { TestCase, TestCaseID } from "../../domain/entities/TestCase";
+import { ExecutionTargetSnapshot } from "../../domain/valueObjects/ExecutionTarget";
 
 export interface UpdateTestCaseInput {
     testCaseID: TestCaseID;
     summary?: string;
     description?: string;
+    executionTargetSnapshot?: ExecutionTargetSnapshot;
 }
 
 /**
@@ -25,6 +27,9 @@ export class UpdateTestCaseSyncUseCase {
         }
         if (input.description !== undefined) {
             testCase.description = input.description;
+        }
+        if (input.executionTargetSnapshot !== undefined) {
+            testCase.executionTargetSnapshot = input.executionTargetSnapshot;
         }
         
         this.repo.save(testCase);

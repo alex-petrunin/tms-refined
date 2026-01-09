@@ -47,19 +47,6 @@ export const projectDemoResSchema = z.object({
   }),
 });
 
-export const settingsReqSchema = z.object({
-  projectId: z.string(),
-});
-
-export const settingsResSchema = z.object({
-  bugReportsProject: z.string().nullable(),
-  testRunsProject: z.string().nullable(),
-  testSuitFieldName: z.string().nullable(),
-  bugIssueCommand: z.string().nullable(),
-  customLinkType: z.string().nullable(),
-  isTestCaseProject: z.boolean(),
-});
-
 export const deleteIntegrationReqSchema = z.object({
   projectId: z.string(),
   id: z.string(),
@@ -174,6 +161,91 @@ export const updateIntegrationResSchema = z.object({
   }),
 });
 
+export const settingsReqSchema = z.object({
+  projectId: z.string(),
+});
+
+export const settingsResSchema = z.object({
+  bugReportsProject: z.string().nullable(),
+  testRunsProject: z.string().nullable(),
+  testSuitFieldName: z.string().nullable(),
+  bugIssueCommand: z.string().nullable(),
+  customLinkType: z.string().nullable(),
+  isTestCaseProject: z.boolean(),
+});
+
+export const getTestCaseReqSchema = z.object({
+  projectId: z.string().optional(),
+  id: z.string().optional(),
+  limit: z.number().optional(),
+  offset: z.number().optional(),
+  search: z.string().optional(),
+  suiteId: z.string().optional(),
+  includeExecutionTarget: z.boolean().optional(),
+});
+
+export const executionTargetDataSchema = z.object({
+  integrationId: z.string(),
+  name: z.string(),
+  type: z.string(),
+  config: z.record(z.any()),
+});
+
+export const testCaseItemSchema = z.object({
+  id: z.string(),
+  issueId: z.string().optional(),
+  summary: z.string(),
+  description: z.string(),
+  suiteId: z.string().optional(),
+  executionTarget: executionTargetDataSchema.optional(),
+});
+
+export const getTestCaseResSchema = z.object({
+  items: z.array(testCaseItemSchema),
+  total: z.number(),
+});
+
+export const createTestCaseReqSchema = z.object({
+  projectId: z.string(),
+  summary: z.string(),
+  description: z.string().optional(),
+  suiteId: z.string().optional(),
+});
+
+export const createTestCaseResSchema = z.object({
+  id: z.string(),
+  issueId: z.string(),
+  summary: z.string(),
+  description: z.string(),
+  suiteId: z.string().optional(),
+});
+
+export const executionTargetInputSchema = z.object({
+  integrationId: z.string(),
+  name: z.string(),
+  type: z.string(),
+  config: z.record(z.any()),
+});
+
+export const updateTestCaseReqSchema = z.object({
+  projectId: z.string(),
+  id: z.string(),
+  issueId: z.string().optional(),
+  summary: z.string().optional(),
+  description: z.string().optional(),
+  suiteId: z.string().optional(),
+  executionTarget: executionTargetInputSchema.optional().nullable(),
+});
+
+export const updateTestCaseResSchema = z.object({
+  id: z.string(),
+  issueId: z.string().optional(),
+  summary: z.string(),
+  description: z.string(),
+  suiteId: z.string().optional(),
+  executionTarget: executionTargetInputSchema.optional(),
+});
+
 export const getTestRunReqSchema = z.object({
   projectId: z.string().optional(),
   id: z.string().optional(),
@@ -234,60 +306,6 @@ export const createTestRunResSchema = z.object({
     type: z.string(),
     ref: z.string(),
   }),
-});
-
-export const getTestCaseReqSchema = z.object({
-  projectId: z.string().optional(),
-  id: z.string().optional(),
-  limit: z.number().optional(),
-  offset: z.number().optional(),
-  search: z.string().optional(),
-  suiteId: z.string().optional(),
-});
-
-export const testCaseItemSchema = z.object({
-  id: z.string(),
-  issueId: z.string().optional(),
-  summary: z.string(),
-  description: z.string(),
-  suiteId: z.string().optional(),
-});
-
-export const getTestCaseResSchema = z.object({
-  items: z.array(testCaseItemSchema),
-  total: z.number(),
-});
-
-export const createTestCaseReqSchema = z.object({
-  projectId: z.string(),
-  summary: z.string(),
-  description: z.string().optional(),
-  suiteId: z.string().optional(),
-});
-
-export const createTestCaseResSchema = z.object({
-  id: z.string(),
-  issueId: z.string(),
-  summary: z.string(),
-  description: z.string(),
-  suiteId: z.string().optional(),
-});
-
-export const updateTestCaseReqSchema = z.object({
-  projectId: z.string(),
-  id: z.string(),
-  issueId: z.string().optional(),
-  summary: z.string().optional(),
-  description: z.string().optional(),
-  suiteId: z.string().optional(),
-});
-
-export const updateTestCaseResSchema = z.object({
-  id: z.string(),
-  issueId: z.string().optional(),
-  summary: z.string(),
-  description: z.string(),
-  suiteId: z.string().optional(),
 });
 
 export const deleteTestSuiteReqSchema = z.object({
@@ -355,6 +373,16 @@ export const gitLabWebhookResSchema = z.object({
   message: z.string().optional(),
 });
 
+export const testRunResultReqSchema = z.object({
+  testRunID: z.string(),
+  passed: z.boolean(),
+});
+
+export const testRunResultResSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+});
+
 export const tMSQueryReqSchema = z.object({
   projectId: z.string().optional(),
   query: z.string(),
@@ -383,16 +411,6 @@ export const tMSQueryResSchema = z.object({
   ),
 });
 
-export const testRunResultReqSchema = z.object({
-  testRunID: z.string(),
-  passed: z.boolean(),
-});
-
-export const testRunResultResSchema = z.object({
-  success: z.boolean(),
-  message: z.string().optional(),
-});
-
 export const runTestSuiteReqSchema = z.object({
   projectId: z.string(),
   suiteID: z.string(),
@@ -404,6 +422,28 @@ export const runTestSuiteReqSchema = z.object({
 
 export const runTestSuiteResSchema = z.object({
   testRunIDs: z.array(z.string()),
+});
+
+export const getSuiteTestCasesReqSchema = z.object({
+  projectId: z.string().optional(),
+  suiteID: z.string(),
+  limit: z.number().optional(),
+  offset: z.number().optional(),
+  includeExecutionTarget: z.boolean().optional(),
+});
+
+export const suiteTestCaseItemSchema = z.object({
+  id: z.string(),
+  issueId: z.string().optional(),
+  summary: z.string(),
+  description: z.string(),
+  executionTarget: executionTargetDataSchema.optional(),
+});
+
+export const getSuiteTestCasesResSchema = z.object({
+  suiteId: z.string(),
+  items: z.array(suiteTestCaseItemSchema),
+  total: z.number(),
 });
 
 export const refItemSchema = z.object({
@@ -458,12 +498,6 @@ export const schema = {
         Res: projectDemoResSchema
       }
     },
-    settings: {
-      GET: {
-        Req: settingsReqSchema,
-        Res: settingsResSchema
-      }
-    },
     integrations: {
       DELETE: {
         Req: deleteIntegrationReqSchema,
@@ -498,20 +532,10 @@ export const schema = {
         }
       }
     },
-    testRuns: {
+    settings: {
       GET: {
-        Req: getTestRunReqSchema,
-        Res: listTestRunsResSchema
-      },
-      POST: {
-        Req: createTestRunReqSchema,
-        Res: createTestRunResSchema
-      },
-      results: {
-        POST: {
-          Req: testRunResultReqSchema,
-          Res: testRunResultResSchema
-        }
+        Req: settingsReqSchema,
+        Res: settingsResSchema
       }
     },
     testCases: {
@@ -526,6 +550,22 @@ export const schema = {
       PUT: {
         Req: updateTestCaseReqSchema,
         Res: updateTestCaseResSchema
+      }
+    },
+    testRuns: {
+      GET: {
+        Req: getTestRunReqSchema,
+        Res: listTestRunsResSchema
+      },
+      POST: {
+        Req: createTestRunReqSchema,
+        Res: createTestRunResSchema
+      },
+      results: {
+        POST: {
+          Req: testRunResultReqSchema,
+          Res: testRunResultResSchema
+        }
       }
     },
     testSuites: {
@@ -550,6 +590,12 @@ export const schema = {
           POST: {
             Req: runTestSuiteReqSchema,
             Res: runTestSuiteResSchema
+          }
+        },
+        testCases: {
+          GET: {
+            Req: getSuiteTestCasesReqSchema,
+            Res: getSuiteTestCasesResSchema
           }
         }
       }

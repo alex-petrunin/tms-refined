@@ -4,7 +4,6 @@ import {createApi} from "@/api";
 import {createComponentLogger} from "@/common/utils/logger.ts";
 import {Tabs} from './components/shared/Tabs';
 import {TestSuitesView} from './components/TestSuites/TestSuitesView';
-import {TestCasesView} from './components/TestCases/TestCasesView';
 import {TestRunsView} from './components/TestRuns/TestRunsView';
 import {IntegrationsView} from './components/Integrations/IntegrationsView';
 import {QueryView} from './components/Query/QueryView';
@@ -16,12 +15,12 @@ const host = await YTApp.register();
 const api = createApi(host);
 const logger = createComponentLogger("test-management-app");
 
-type TabId = 'test-suites' | 'test-cases' | 'test-runs' | 'integrations' | 'query';
+type TabId = 'test-suites' | 'test-runs' | 'integrations' | 'query';
 
 // Map tab IDs to AppState page names
+// Note: Test Cases tab removed as it's now integrated into Test Suites hierarchical view
 const tabToPageMap: Record<TabId, "testSuits" | "testCases" | "testRuns" | "testDashboard" | "integrations"> = {
     'test-suites': 'testSuits',
-    'test-cases': 'testCases',
     'test-runs': 'testRuns',
     'integrations': 'integrations',
     'query': 'testDashboard',
@@ -29,7 +28,7 @@ const tabToPageMap: Record<TabId, "testSuits" | "testCases" | "testRuns" | "test
 
 const pageToTabMap: Record<"testSuits" | "testCases" | "testRuns" | "testDashboard" | "integrations", TabId> = {
     'testSuits': 'test-suites',
-    'testCases': 'test-cases',
+    'testCases': 'test-suites', // Redirect test cases to test suites view
     'testRuns': 'test-runs',
     'testDashboard': 'query',
     'integrations': 'integrations',
@@ -85,8 +84,6 @@ const AppComponent: FC = () => {
         switch (activeTab) {
             case 'test-suites':
                 return <TestSuitesView projectId={projectKey}/>;
-            case 'test-cases':
-                return <TestCasesView projectId={projectKey}/>;
             case 'test-runs':
                 return <TestRunsView projectId={projectKey}/>;
             case 'integrations':
@@ -105,7 +102,6 @@ const AppComponent: FC = () => {
                 onTabChange={handleTabChange}
                 tabs={[
                     {id: 'test-suites', label: 'Test Suites'},
-                    {id: 'test-cases', label: 'Test Cases'},
                     {id: 'test-runs', label: 'Test Runs'},
                     {id: 'integrations', label: 'Integrations'},
                     {id: 'query', label: 'Query'}

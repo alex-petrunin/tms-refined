@@ -10,6 +10,17 @@ export type GetTestCaseReq = {
     offset?: number;
     search?: string;
     suiteId?: string;
+    includeExecutionTarget?: boolean;
+};
+
+/**
+ * @zod-to-schema
+ */
+export type ExecutionTargetData = {
+    integrationId: string;
+    name: string;
+    type: string;
+    config: Record<string, any>;
 };
 
 /**
@@ -21,6 +32,7 @@ export type TestCaseItem = {
     summary: string;
     description: string;
     suiteId?: string;
+    executionTarget?: ExecutionTargetData;
 };
 
 /**
@@ -97,7 +109,8 @@ export default function handle(ctx: CtxGet<GetTestCaseRes, GetTestCaseReq>): voi
             limit: getParam('limit') ? Number(getParam('limit')) : 50,
             offset: getParam('offset') ? Number(getParam('offset')) : 0,
             search: getParam('search'),
-            suiteId: getParam('suiteId')
+            suiteId: getParam('suiteId'),
+            includeExecutionTarget: getParam('includeExecutionTarget') === 'true'
         };
         
 
@@ -127,13 +140,25 @@ export default function handle(ctx: CtxGet<GetTestCaseRes, GetTestCaseReq>): voi
             }
             
             const issue = findIssueByTestCaseId(query.id, ytProject);
-            testCases = [{
+            const item: TestCaseItem = {
                 id: testCase.id,
                 issueId: issue?.idReadable || issue?.id,
                 summary: testCase.summary,
                 description: testCase.description,
                 suiteId: issue?.extensionProperties?.suiteId
-            }];
+            };
+            
+            // Include execution target if requested
+            if (query.includeExecutionTarget && testCase.executionTargetSnapshot) {
+                item.executionTarget = {
+                    integrationId: testCase.executionTargetSnapshot.integrationId,
+                    name: testCase.executionTargetSnapshot.name,
+                    type: testCase.executionTargetSnapshot.type,
+                    config: testCase.executionTargetSnapshot.config
+                };
+            }
+            
+            testCases = [item];
         } else {
             // Get all test cases and filter
             const allTestCases = repository.findAll();
@@ -143,13 +168,25 @@ export default function handle(ctx: CtxGet<GetTestCaseRes, GetTestCaseReq>): voi
                 .map(testCase => {
                     const issue = findIssueByTestCaseId(testCase.id, ytProject);
                     const suiteIdFromIssue = issue?.extensionProperties?.suiteId;
-                    return {
+                    const item: TestCaseItem = {
                         id: testCase.id,
                         issueId: issue?.idReadable || issue?.id || '',
                         summary: testCase.summary || '',
                         description: testCase.description || '',
                         suiteId: suiteIdFromIssue
                     };
+                    
+                    // Include execution target if requested
+                    if (query.includeExecutionTarget && testCase.executionTargetSnapshot) {
+                        item.executionTarget = {
+                            integrationId: testCase.executionTargetSnapshot.integrationId,
+                            name: testCase.executionTargetSnapshot.name,
+                            type: testCase.executionTargetSnapshot.type,
+                            config: testCase.executionTargetSnapshot.config
+                        };
+                    }
+                    
+                    return item;
                 })
                 .filter(item => {
                     // Filter by suiteId if provided
