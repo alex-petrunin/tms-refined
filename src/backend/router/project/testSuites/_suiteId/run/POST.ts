@@ -133,10 +133,11 @@ export default function handle(ctx: CtxPost<RunTestSuiteReq, RunTestSuiteRes>): 
         const testRunID = `tr_${timestamp}_${random}`;
         
         // Create test run synchronously using the sync repository
+        // Use body.suiteID (actual ID) not suiteId from path (which might be "_suiteId" placeholder)
         const testRun = new TestRun(
             testRunID,
             body.testCaseIDs,
-            suiteId,
+            body.suiteID,  // ✅ Use body.suiteID instead of path suiteId
             executionTarget
         );
         
