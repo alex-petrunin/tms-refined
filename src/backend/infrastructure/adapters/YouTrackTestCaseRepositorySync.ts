@@ -95,11 +95,17 @@ export class YouTrackTestCaseRepositorySync implements TestCaseRepositorySync {
         const testCases: TestCase[] = [];
         for (const issue of issuesArray) {
             const extProps = issue.extensionProperties || {};
+            
+            // Check if issue is marked as Test Case via custom field (allows manual creation)
+            const tmsKindField = issue.fields && issue.fields['TMS Kind'];
+            const isTmsTestCase = tmsKindField && tmsKindField.name === 'Test Case';
+            
             // An issue is a test case if it has:
-            // 1. testCaseId extension property, OR
-            // 2. testCaseSummary extension property (legacy marker), OR
-            // 3. suiteId extension property (associated with a suite)
-            if (extProps.testCaseId || extProps.testCaseSummary || extProps.suiteId) {
+            // 1. "TMS Kind" custom field = "Test Case" (manual creation), OR
+            // 2. testCaseId extension property, OR
+            // 3. testCaseSummary extension property (legacy marker), OR
+            // 4. suiteId extension property (associated with a suite)
+            if (isTmsTestCase || extProps.testCaseId || extProps.testCaseSummary || extProps.suiteId) {
                 testCases.push(this.mapIssueToTestCase(issue));
             }
         }
