@@ -3,11 +3,10 @@ import { YouTrackTestRunRepository } from "../../../../../infrastructure/adapter
 import { YouTrackTestRunRepositorySync } from "../../../../../infrastructure/adapters/YouTrackTestRunRepositorySync";
 import { CIAdapterFactory } from "../../../../../infrastructure/adapters/CIAdapterFactory";
 import { DynamicExecutionTrigger } from "../../../../../infrastructure/adapters/DynamicExecutionTrigger";
-import { RunTestCasesUseCase } from "../../../../../application/usecases/RunTestCases";
+import { RunTestCasesSyncUseCase } from "../../../../../application/usecases/RunTestCasesSync";
 import { ExecutionTargetSnapshot } from "../../../../../domain/valueObjects/ExecutionTarget";
 import { ExecutionTargetType } from "../../../../../domain/enums/ExecutionTargetType";
 import { ExecutionModeType } from "../../../../../domain/valueObjects/ExecutionMode";
-import { TestRun } from "../../../../../domain/entities/TestRun";
 
 /**
  * @zod-to-schema
@@ -74,7 +73,7 @@ export default function handle(ctx: CtxPost<RunTestSuiteReq, RunTestSuiteRes>): 
     });
 
     try {
-        // Build infrastructure
+        // Build infrastructure layer (DDD: Infrastructure adapters)
         const integrationRepo = new YouTrackIntegrationRepository();
         
         // Get test runs project from settings, or fallback to current project
@@ -87,14 +86,14 @@ export default function handle(ctx: CtxPost<RunTestSuiteReq, RunTestSuiteRes>): 
             targetProjectKey = projectKey;
         }
         
-        // Use SYNC repository for synchronous YouTrack issue creation
+        // Synchronous repository for YouTrack issue creation
         const testRunRepoSync = new YouTrackTestRunRepositorySync(
             targetProjectKey,
             ctx.currentUser,
             projectKey  // Test case/suite project
         );
         
-        // Also create async repository for background operations
+        // Async repository for background operations
         const testRunRepo = new YouTrackTestRunRepository(
             ctx.project,
             ctx.settings,
@@ -102,7 +101,7 @@ export default function handle(ctx: CtxPost<RunTestSuiteReq, RunTestSuiteRes>): 
             ctx.globalStorage
         );
         
-        // Create adapter factory and execution trigger
+        // Execution trigger port (DDD: Application port)
         const adapterFactory = new CIAdapterFactory(
             integrationRepo,
             projectKey,
@@ -110,14 +109,7 @@ export default function handle(ctx: CtxPost<RunTestSuiteReq, RunTestSuiteRes>): 
         );
         const executionTrigger = new DynamicExecutionTrigger(adapterFactory);
         
-        // Create use case (no resolver needed for direct execution)
-        const useCase = new RunTestCasesUseCase(
-            testRunRepo,
-            executionTrigger,
-            null  // executionTargetResolver - not needed when target is provided
-        );
-        
-        // Build ExecutionTargetSnapshot from request
+        // Build domain value object (DDD: Domain layer)
         const executionTarget = new ExecutionTargetSnapshot(
             body.executionTarget.integrationId,
             body.executionTarget.name,
@@ -125,50 +117,20 @@ export default function handle(ctx: CtxPost<RunTestSuiteReq, RunTestSuiteRes>): 
             body.executionTarget.config
         );
         
-        console.log('[POST testSuites/run] Creating test run synchronously...');
-        
-        // Generate unique ID (YouTrack-compatible, no crypto module)
-        const timestamp = Date.now().toString(36);
-        const random = Math.random().toString(36).substring(2, 8);
-        const testRunID = `tr_${timestamp}_${random}`;
-        
-        // Create test run synchronously using the sync repository
-        // Use body.suiteID (actual ID) not suiteId from path (which might be "_suiteId" placeholder)
-        const testRun = new TestRun(
-            testRunID,
-            body.testCaseIDs,
-            body.suiteID,  // ✅ Use body.suiteID instead of path suiteId
-            executionTarget
+        // Create and execute use case (DDD: Application layer)
+        const useCase = new RunTestCasesSyncUseCase(
+            testRunRepoSync,
+            executionTrigger
         );
         
-        // Set status based on execution mode
-        if (body.executionMode === 'MANAGED') {
-            testRun.start();
-        } else {
-            testRun.markAwaiting();
-        }
+        console.log('[POST testSuites/run] Executing use case...');
         
-        // Save test run synchronously - creates YouTrack issue
-        const createdIssue = testRunRepoSync.save(testRun);
-        const actualTestRunID = createdIssue.idReadable || createdIssue.id || testRunID;
-        
-        console.log('[POST testSuites/run] YouTrack issue created:', {
-            tempId: testRunID,
-            actualId: actualTestRunID,
-            issueId: createdIssue.idReadable
+        const actualTestRunID = useCase.execute({
+            suiteID: body.suiteID,
+            testCaseIDs: body.testCaseIDs,
+            executionMode: body.executionMode as ExecutionModeType,
+            executionTarget: executionTarget
         });
-        
-        // Trigger execution asynchronously (fire and forget)
-        if (body.executionMode === 'MANAGED') {
-            console.log('[POST testSuites/run] Triggering execution asynchronously...');
-            // Update testRun with actual ID for execution
-            testRun.id = actualTestRunID;
-            executionTrigger.trigger(testRun).then(() => {
-                console.log('[POST testSuites/run] Async execution completed');
-            }).catch((error) => {
-                console.error('[POST testSuites/run] Async execution failed:', error);
-            });
-        }
         
         const testRunIDs: string[] = [actualTestRunID];
         
