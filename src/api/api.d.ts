@@ -2,12 +2,12 @@ import { ExtractRPCFromHandler } from "../backend/types/utility";
 import * as globaldemoGETHandler from "../backend/router/global/demo/GET";
 import * as globalsettingsGETHandler from "../backend/router/global/settings/GET";
 import * as globaltestCaseProjectGETHandler from "../backend/router/global/testCaseProject/GET";
+import * as projectdemoGETHandler from "../backend/router/project/demo/GET";
 import * as projectsettingsGETHandler from "../backend/router/project/settings/GET";
 import * as projectintegrationsDELETEHandler from "../backend/router/project/integrations/DELETE";
 import * as projectintegrationsGETHandler from "../backend/router/project/integrations/GET";
 import * as projectintegrationsPOSTHandler from "../backend/router/project/integrations/POST";
 import * as projectintegrationsPUTHandler from "../backend/router/project/integrations/PUT";
-import * as projectdemoGETHandler from "../backend/router/project/demo/GET";
 import * as projecttestRunsGETHandler from "../backend/router/project/testRuns/GET";
 import * as projecttestRunsPOSTHandler from "../backend/router/project/testRuns/POST";
 import * as projecttestCasesGETHandler from "../backend/router/project/testCases/GET";
@@ -42,6 +42,9 @@ export type ApiRouter = {
     };
     };
     project: {
+    demo: {
+    GET: ExtractRPCFromHandler<projectdemoGETHandler.Handle>;
+    };
     settings: {
     GET: ExtractRPCFromHandler<projectsettingsGETHandler.Handle>;
     };
@@ -62,9 +65,6 @@ export type ApiRouter = {
     };
     };
     };
-    };
-    demo: {
-    GET: ExtractRPCFromHandler<projectdemoGETHandler.Handle>;
     };
     testRuns: {
     GET: ExtractRPCFromHandler<projecttestRunsGETHandler.Handle>;

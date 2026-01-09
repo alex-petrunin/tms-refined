@@ -6,6 +6,7 @@ import {ErrorState} from '../shared/ErrorState';
 import {EmptyState} from '../shared/EmptyState';
 import {TestCaseList} from './TestCaseList';
 import {TestCaseForm} from './TestCaseForm';
+import {RunTestCasesDialog} from '../TestRuns/RunTestCasesDialog';
 import Button from '@jetbrains/ring-ui-built/components/button/button';
 
 interface TestCasesViewProps {
@@ -17,6 +18,9 @@ export const TestCasesView = memo<TestCasesViewProps>(({projectId}) => {
   const [editingCase, setEditingCase] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [selectedTestCaseIds, setSelectedTestCaseIds] = useState<string[]>([]);
+  const [showRunDialog, setShowRunDialog] = useState(false);
+  const [preSelectedCaseIds, setPreSelectedCaseIds] = useState<string[] | undefined>(undefined);
   
   // Debounce search input
   useEffect(() => {
@@ -55,6 +59,22 @@ export const TestCasesView = memo<TestCasesViewProps>(({projectId}) => {
     refetch();
   }, [refetch]);
 
+  const handleRunSelected = useCallback(() => {
+    setPreSelectedCaseIds(selectedTestCaseIds);
+    setShowRunDialog(true);
+  }, [selectedTestCaseIds]);
+
+  const handleRunSingle = useCallback((caseId: string) => {
+    setPreSelectedCaseIds([caseId]);
+    setShowRunDialog(true);
+  }, []);
+
+  const handleRunDialogClose = useCallback(() => {
+    setShowRunDialog(false);
+    setPreSelectedCaseIds(undefined);
+    setSelectedTestCaseIds([]);
+  }, []);
+
   if (loading) {
     return <LoadingState message="Loading test cases..." />;
   }
@@ -88,11 +108,24 @@ export const TestCasesView = memo<TestCasesViewProps>(({projectId}) => {
             onChange={(e) => setSearchInput(e.target.value)}
             className="search-input"
           />
+          <Button 
+            onClick={handleRunSelected} 
+            disabled={selectedTestCaseIds.length === 0}
+          >
+            Run Selected ({selectedTestCaseIds.length})
+          </Button>
           <Button primary onClick={handleCreate}>
             Create Test Case
           </Button>
         </div>
       </div>
+      {showRunDialog && (
+        <RunTestCasesDialog
+          projectId={projectId || ''}
+          onClose={handleRunDialogClose}
+          preSelectedTestCaseIds={preSelectedCaseIds}
+        />
+      )}
       {testCases.length === 0 ? (
         <EmptyState
           message="No test cases found"
@@ -104,6 +137,10 @@ export const TestCasesView = memo<TestCasesViewProps>(({projectId}) => {
           testCases={testCases}
           testSuites={testSuites}
           onEdit={handleEdit}
+          selectedIds={selectedTestCaseIds}
+          onSelect={setSelectedTestCaseIds}
+          onRunSingle={handleRunSingle}
+          showCheckboxes={true}
         />
       )}
     </div>

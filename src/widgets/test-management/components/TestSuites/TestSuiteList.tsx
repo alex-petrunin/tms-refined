@@ -19,10 +19,11 @@ interface TestSuiteListProps {
   suites: TestSuite[];
   onEdit: (suiteId: string) => void;
   onDelete: (suiteId: string, suiteName: string) => void;
+  onRunSuite: (suiteId: string) => void;
   deleting?: boolean;
 }
 
-export const TestSuiteList = memo<TestSuiteListProps>(({projectId, suites, onEdit, onDelete, deleting}) => {
+export const TestSuiteList = memo<TestSuiteListProps>(({projectId, suites, onEdit, onDelete, onRunSuite, deleting}) => {
   const [confirmDelete, setConfirmDelete] = useState<{id: string; name: string} | null>(null);
 
   const handleDeleteClick = useCallback((id: string, name: string) => {
@@ -62,7 +63,10 @@ export const TestSuiteList = memo<TestSuiteListProps>(({projectId, suites, onEdi
       id: 'actions',
       title: 'Actions',
       getValue: (item) => (
-        <div className="action-buttons">
+        <div className="action-buttons" style={{display: 'flex', gap: 8}}>
+          <Button onClick={() => onRunSuite(item.id)}>
+            Run Suite
+          </Button>
           <Button onClick={() => onEdit(item.id)}>
             Edit
           </Button>
@@ -76,7 +80,7 @@ export const TestSuiteList = memo<TestSuiteListProps>(({projectId, suites, onEdi
         </div>
       )
     }
-  ], [projectId, onEdit, handleDeleteClick, deleting]);
+  ], [projectId, onEdit, onRunSuite, handleDeleteClick, deleting]);
 
   return (
     <>

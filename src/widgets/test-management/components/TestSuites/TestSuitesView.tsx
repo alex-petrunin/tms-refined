@@ -5,6 +5,7 @@ import {ErrorState} from '../shared/ErrorState';
 import {EmptyState} from '../shared/EmptyState';
 import {TestSuiteList} from './TestSuiteList';
 import {TestSuiteForm} from './TestSuiteForm';
+import {RunTestCasesDialog} from '../TestRuns/RunTestCasesDialog';
 import Button from '@jetbrains/ring-ui-built/components/button/button';
 import {useHost} from '@/widgets/common/hooks/use-host';
 import {createApi} from '@/api';
@@ -19,6 +20,8 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
   const [editingSuite, setEditingSuite] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showRunDialog, setShowRunDialog] = useState(false);
+  const [preSelectedSuiteId, setPreSelectedSuiteId] = useState<string | undefined>(undefined);
 
   console.log(projectId);
   
@@ -69,6 +72,16 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
     refetch();
   }, [refetch]);
 
+  const handleRunSuite = useCallback((suiteId: string) => {
+    setPreSelectedSuiteId(suiteId);
+    setShowRunDialog(true);
+  }, []);
+
+  const handleRunDialogClose = useCallback(() => {
+    setShowRunDialog(false);
+    setPreSelectedSuiteId(undefined);
+  }, []);
+
   if (loading) {
     return <LoadingState message="Loading test suites..." />;
   }
@@ -101,6 +114,14 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
         </div>
       </div>
       
+      {showRunDialog && (
+        <RunTestCasesDialog
+          projectId={projectId || ''}
+          onClose={handleRunDialogClose}
+          preSelectedSuiteId={preSelectedSuiteId}
+        />
+      )}
+      
       {deleteError && (
         <div className="error-message">
           {deleteError}
@@ -120,6 +141,7 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
           suites={testSuites}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onRunSuite={handleRunSuite}
           deleting={deleting}
         />
       )}
