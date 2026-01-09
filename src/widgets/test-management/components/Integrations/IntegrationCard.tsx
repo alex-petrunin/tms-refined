@@ -64,12 +64,24 @@ export const IntegrationCard = memo<IntegrationCardProps>(({
       
       <p className="integration-description">{description}</p>
       
+      {integration.config.projectId && (
+        <div className="integration-config">
+          <span className="config-label">Project ID:</span>
+          <code>{integration.config.projectId}</code>
+        </div>
+      )}
+      
       {integration.config.projectUrl && (
         <div className="integration-config">
-          <span className="config-label">Project:</span>
-          <a href={integration.config.projectUrl} target="_blank" rel="noopener noreferrer">
-            {integration.config.projectUrl}
-          </a>
+          <span className="config-label">URL:</span>
+          <span className="config-value">{integration.config.projectUrl}</span>
+        </div>
+      )}
+
+      {integration.config.baseUrl && (
+        <div className="integration-config">
+          <span className="config-label">Base URL:</span>
+          <code>{integration.config.baseUrl}</code>
         </div>
       )}
       

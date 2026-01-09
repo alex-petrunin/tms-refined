@@ -4,8 +4,11 @@ import { createApi } from '@/api';
 
 export interface IntegrationConfig {
   projectUrl?: string;
+  projectId?: string;
+  baseUrl?: string;
   pipelineRef?: string;
   token?: string;
+  apiToken?: string;
   webhookSecret?: string;
 }
 
