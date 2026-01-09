@@ -331,7 +331,7 @@ export class YouTrackTestRunRepositorySync implements TestRunRepositorySync {
         }
     }
 
-    private mapFieldValueToTestStatus(fieldValue: string): TestStatus {
+    private mapFieldValueToTestStatus(fieldValue: string): TestStatus | null {
         switch (fieldValue) {
             case 'Pending':
                 return TestStatus.PENDING;
@@ -344,7 +344,8 @@ export class YouTrackTestRunRepositorySync implements TestRunRepositorySync {
             case 'Awaiting External Results':
                 return TestStatus.AWAITING_EXTERNAL_RESULTS;
             default:
-                return TestStatus.PENDING;
+                // Return null for unknown values (field not properly set)
+                return null;
         }
     }
 
@@ -403,11 +404,28 @@ export class YouTrackTestRunRepositorySync implements TestRunRepositorySync {
         // Use the human-readable issue ID (e.g., "TEST-123") as the test run ID
         const testRunId = extProps.testRunId || issue.idReadable || issue.id;
         
-        // Get status
-        let status: TestStatus = TestStatus.PENDING;
-        const statusStr = extProps.testRunStatus;
-        if (statusStr && Object.values(TestStatus).includes(statusStr as TestStatus)) {
-            status = statusStr as TestStatus;
+        // Get status - prioritize custom field over extension property
+        let status: TestStatus | null = null;
+        
+        // First, try to read from custom field (updated when user changes in YouTrack UI)
+        try {
+            const statusField = issue.fields && issue.fields['Test Run Status'];
+            if (statusField && statusField.name) {
+                status = this.mapFieldValueToTestStatus(statusField.name);
+            }
+        } catch (e) {
+            // Fallback to extension property
+            console.warn('[mapIssueToTestRun] Failed to read status from custom field:', e);
+        }
+        
+        // Fallback to extension property if custom field not available
+        if (status === null) {
+            const statusStr = extProps.testRunStatus;
+            if (statusStr && Object.values(TestStatus).includes(statusStr as TestStatus)) {
+                status = statusStr as TestStatus;
+            } else {
+                status = TestStatus.PENDING; // Final fallback
+            }
         }
         
         // Get execution target

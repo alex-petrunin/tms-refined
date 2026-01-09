@@ -384,6 +384,13 @@
   color: var(--ring-secondary-color, #666);
 }
 
+.integration-config .config-value {
+  color: var(--ring-text-color, #333);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+
 .integration-config a {
   color: var(--ring-main-color, #0065ff);
   text-decoration: none;
@@ -400,6 +407,7 @@
   padding: 1px 4px;
   border-radius: 3px;
   font-family: monospace;
+  font-size: 11px;
 }
 
 .integration-actions {
