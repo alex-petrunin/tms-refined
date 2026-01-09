@@ -59,7 +59,6 @@ export const ExecutionTargetCell: React.FC<ExecutionTargetCellProps> = memo(({
       key: option.key,
       label: option.label,
       type: option.type,
-      rgItemType: Select.Type.ITEM,
     }));
   }, [integrationOptions]);
 
@@ -155,9 +154,9 @@ export const ExecutionTargetCell: React.FC<ExecutionTargetCellProps> = memo(({
         selected={selectedOption}
         onChange={handleChange}
         filter
+        clear
         disabled={disabled}
-        placeholder="Select target..."
-        label="Execution Target"
+        placeholder="Not set"
         size={Select.Size.S}
       />
     </div>

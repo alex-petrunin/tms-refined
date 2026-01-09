@@ -165,8 +165,19 @@ export const TestSuitesView = memo<TestSuitesViewProps>(({projectId}) => {
     // The ExecutionTargetCell component handles the actual update
     // This is just a callback for additional actions if needed
     console.log('Test case target updated:', caseId, target);
-    refetch();
-  }, [refetch]);
+    
+    // Find which suite contains this test case and reload its data
+    const suiteWithCase = suites.find(suite => 
+      suite.cases.some(c => c.id === caseId)
+    );
+    
+    if (suiteWithCase) {
+      // Reload the cases for this specific suite
+      loadCasesForSuite(suiteWithCase.id).catch(err => {
+        console.error('Failed to reload suite cases:', err);
+      });
+    }
+  }, [suites, loadCasesForSuite]);
 
   const handleAddCase = useCallback((suiteId: string) => {
     // Expand the suite if not already expanded

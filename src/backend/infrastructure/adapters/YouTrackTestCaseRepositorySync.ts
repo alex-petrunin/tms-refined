@@ -183,7 +183,7 @@ export class YouTrackTestCaseRepositorySync implements TestCaseRepositorySync {
         
         // Set execution target if provided
         if (testCase.executionTargetSnapshot) {
-            issue.extensionProperties.executionTargetIntegrationId = testCase.executionTargetSnapshot.integrationId;
+            issue.extensionProperties.executionTargetId = testCase.executionTargetSnapshot.integrationId;
             issue.extensionProperties.executionTargetName = testCase.executionTargetSnapshot.name;
             issue.extensionProperties.executionTargetType = testCase.executionTargetSnapshot.type;
             issue.extensionProperties.executionTargetConfig = JSON.stringify(testCase.executionTargetSnapshot.config);
@@ -196,6 +196,9 @@ export class YouTrackTestCaseRepositorySync implements TestCaseRepositorySync {
     }
 
     private updateIssue(issue: any, testCase: TestCase): void {
+        console.log(`[updateIssue] Updating issue ${testCase.id}`);
+        console.log(`[updateIssue] executionTargetSnapshot:`, testCase.executionTargetSnapshot);
+        
         issue.summary = testCase.summary;
         issue.description = testCase.description;
         issue.extensionProperties.testCaseSummary = testCase.summary;
@@ -203,10 +206,12 @@ export class YouTrackTestCaseRepositorySync implements TestCaseRepositorySync {
         
         // Update execution target if provided
         if (testCase.executionTargetSnapshot) {
-            issue.extensionProperties.executionTargetIntegrationId = testCase.executionTargetSnapshot.integrationId;
+            console.log(`[updateIssue] Setting executionTargetId to:`, testCase.executionTargetSnapshot.integrationId);
+            issue.extensionProperties.executionTargetId = testCase.executionTargetSnapshot.integrationId;
             issue.extensionProperties.executionTargetName = testCase.executionTargetSnapshot.name;
             issue.extensionProperties.executionTargetType = testCase.executionTargetSnapshot.type;
             issue.extensionProperties.executionTargetConfig = JSON.stringify(testCase.executionTargetSnapshot.config);
+            console.log(`[updateIssue] After setting, value is:`, issue.extensionProperties.executionTargetId);
         }
         
         this.setCustomFields(issue, testCase);
@@ -274,6 +279,8 @@ export class YouTrackTestCaseRepositorySync implements TestCaseRepositorySync {
         // Use the human-readable issue ID (e.g., "TEST-123") as the test case ID
         const testCaseId = extProps.testCaseId || issue.idReadable || issue.id;
         
+        console.log(`[mapIssueToTestCase] Issue ${testCaseId}, executionTargetId:`, extProps.executionTargetId);
+        
         // Get execution target - prioritize custom field for type, config from extension properties
         let executionTargetType: ExecutionTargetType | null = null;
         
@@ -303,10 +310,11 @@ export class YouTrackTestCaseRepositorySync implements TestCaseRepositorySync {
         }
         
         // Create execution target snapshot if we have the required data
+        // Must have a valid integrationId to create a snapshot
         let executionTargetSnapshot: ExecutionTargetSnapshot | undefined;
-        if (extProps.executionTargetIntegrationId || (executionTargetType && config)) {
+        if (extProps.executionTargetId && extProps.executionTargetId !== '') {
             executionTargetSnapshot = new ExecutionTargetSnapshot(
-                extProps.executionTargetIntegrationId || '',
+                extProps.executionTargetId,
                 extProps.executionTargetName || '',
                 executionTargetType || ExecutionTargetType.MANUAL,
                 config
