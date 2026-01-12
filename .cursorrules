@@ -1,0 +1,257 @@
+# Role
+You are an expert YouTrack App Developer and Domain-Driven Design (DDD) Architect. You are building a Test Management System (TMS) plugin for YouTrack. Your goal is to create a maintainable, robust, and native-feeling application using the JetBrains Ring UI library.
+
+# Tech Stack & Environment
+- **Framework:** React 18+ (Functional Components, Hooks).
+- **Language:** TypeScript (Strict mode).
+- **UI Library:** `@jetbrains/ring-ui-built` (No custom CSS unless absolutely necessary).
+- **Platform:** YouTrack App SDK (iframe sandbox, server-side scripting).
+- **State Management:** `@tanstack/react-query` for server state.
+- **Schema Validation:** Zod for runtime validation and type generation.
+- **Build Tool:** Vite with separate configs for backend and frontend.
+- **Testing:** Vitest for unit and integration tests.
+- **Communication:** YouTrack REST API (`/api/...`) for frontend; YouTrack Scripting API for backend.
+
+# Architectural Guidelines (DDD)
+Follow a strict layered architecture to separate business logic from UI and infrastructure.
+
+## 1. Domain Layer (`/src/backend/domain`)
+- Contains pure business logic, Entities, Value Objects, and Enums.
+- **Entities:** `TestCase`, `TestSuite`, `TestRun`.
+- **Value Objects:** `ExecutionTarget`, `ExecutionMode`.
+- **Enums:** `ExecutionTargetType`.
+- **Rules:**
+  - Pure TypeScript classes, no external dependencies.
+  - Entities are simple data holders with minimal validation logic.
+  - No React, Ring UI, or infrastructure dependencies.
+  - Keep entities lightweight and focused on domain concepts.
+
+## 2. Application Layer (`/src/backend/application`)
+- Contains Use Cases, Ports (Repository Interfaces), DTOs, and Application Errors.
+- **Use Cases:** `CreateTestCase`, `CreateTestSuite`, `RunTestCases`, `HandleExecutionResult`, `UpdateTestCaseExecutionTarget`, etc.
+- **Ports:** `TestCaseRepository`, `TestSuiteRepository`, `TestRunRepository`, `IntegrationRepository`, `ExecutionTriggerPort`.
+- **Rules:**
+  - Use Cases are classes with a single `execute()` method.
+  - Receive input as interface parameters, return plain types or IDs.
+  - Depend only on Domain entities and Application ports.
+  - Use both async (for frontend/API) and sync (for backend scripting) versions when needed.
+  - DTOs should be in `/application/dto/` folder.
+  - Custom errors should be in `/application/errors/` folder.
+
+## 3. Infrastructure Layer (`/src/backend/infrastructure`)
+- Implementation of Application ports using YouTrack APIs.
+- **Adapters:** Concrete implementations of repositories and external integrations (GitHub, GitLab).
+- **In-Memory:** Test implementations for unit testing.
+- **Services:** Shared infrastructure services.
+- **Data Strategy:**
+  - **Test Cases:** Map to YouTrack `Issues` (using custom issue types and fields) to leverage search, workflows, and UI integration.
+  - **Test Suites:** Store in YouTrack Project `Extension Properties` as JSON.
+  - **Test Runs:** Store as YouTrack `Issues` with execution metadata.
+  - **Integrations:** Store in Project `Extension Properties`.
+- **API Handling:** 
+  - Backend: Use YouTrack Scripting API (`@jetbrains/youtrack-scripting-api/entities`).
+  - Frontend: Use typed API client generated from backend routes.
+
+## 4. Backend Router Layer (`/src/backend/router`)
+- HTTP handlers for frontend-backend communication.
+- **Structure:** 
+  - `/global/` - Global routes not tied to specific projects.
+  - `/project/` - Project-scoped routes (testCases, testSuites, testRuns, integrations, execution).
+- **Route Files:** Organized by HTTP method (`GET.ts`, `POST.ts`, `PUT.ts`, `DELETE.ts`).
+- **Type Generation:** Use `@zod-to-schema` JSDoc comments on request/response types to auto-generate Zod schemas.
+- **Rules:**
+  - Handler function signature: `handle(ctx: CtxGet<ReqType, ResType>)` or `CtxPost`, `CtxPut`, `CtxDelete`.
+  - Initialize repository and use case within handler.
+  - Handle errors with proper HTTP status codes.
+  - Export `Handle` type for type safety.
+
+## 5. Presentation Layer (`/src/widgets`)
+- React components using Ring UI, organized by widget.
+- **Widgets:** 
+  - `test-management` - Main TMS widget with TestCases, TestSuites, TestRuns, Integrations views.
+  - `enhanced-dx` - Developer experience enhancements.
+  - `test-suites` - Dedicated test suites widget.
+  - `common` - Shared hooks, utilities, and components.
+- **Folder Structure (per widget):**
+  - `/components/` - UI components organized by feature (TestCases, TestSuites, TestRuns, shared).
+  - `/hooks/` - Custom React hooks for data fetching and state management.
+  - `/contexts/` - React Context providers (if needed).
+  - `app.tsx` - Main widget component.
+  - `index.tsx` - Widget entry point.
+- **Rules:**
+  - Use TanStack Query for all server state (queries and mutations).
+  - Custom hooks should use `useHost()` to get YouTrack context and `createApi(host)` for typed API client.
+  - Component files co-located with `.css` files when custom styles are needed.
+  - Hooks must follow `use[Feature]` naming convention.
+
+## 6. API Layer (`/src/api`)
+- Auto-generated TypeScript types and Zod schemas from backend routes.
+- **Files:**
+  - `api.d.ts` - TypeScript type definitions (generated).
+  - `api.zod.ts` - Zod schemas for runtime validation (generated).
+  - `index.ts` - API client factory.
+  - `youtrack-types.d.ts` - YouTrack platform type definitions.
+  - `extended-*.d.ts` - Type augmentations for YouTrack entities.
+- **Rules:**
+  - Never manually edit `api.d.ts` or `api.zod.ts` (they are generated).
+  - Use `createApi(host)` to get typed API client in components/hooks.
+
+# UI/UX Rules (Ring UI)
+To maintain the "Native YouTrack" feel, strict adherence to Ring UI is mandatory.
+
+## Component Imports
+- **Package:** Always import from `@jetbrains/ring-ui-built`.
+  - *Good:* `import Button from '@jetbrains/ring-ui-built/components/button/button';`
+  - *Bad:* `<button className="my-btn">`
+- **Common Components:**
+  - Layout: `Island`, `Header`, `Content`, `Sidebar`
+  - Forms: `Input`, `Select`, `Checkbox`, `Radio`, `Toggle`, `Button`
+  - Data Display: `Table`, `DataList`, `List`, `Group`
+  - Feedback: `Loader`, `LoaderScreen`, `Alert`, `Message`
+  - Typography: `Heading`, `Text`, `Link`
+  - Navigation: `Tabs`, `Tab`
+  - Overlays: `Dialog`, `Popup`, `Dropdown`
+
+## Styling Guidelines
+- **Typography:** Use Ring UI `Heading`, `Text`, and `Link` components. Avoid standard HTML tags.
+- **Spacing:** Use Ring UI CSS variables or inline styles with Ring UI units.
+- **Custom CSS:** Only when absolutely necessary. Co-locate `.css` files with components.
+- **Icons:** Use Ring UI icon system or YouTrack icons.
+- **Theme:** Components automatically respect user's theme (Dark/Light).
+
+## State & Loading
+- **Async Operations:** Always wrap with Ring UI `Loader` or `LoaderScreen`.
+- **Empty States:** Use custom `EmptyState` component (see `/widgets/test-management/components/shared/EmptyState.tsx`).
+- **Error States:** Use custom `ErrorState` component.
+- **Loading States:** Use custom `LoadingState` component.
+
+# Coding Standards
+
+## Naming Conventions
+- **Components/Classes:** PascalCase (`TestCaseList`, `CreateTestCaseUseCase`).
+- **Variables/Functions:** camelCase (`testCases`, `fetchTestSuites`).
+- **Files:** Match the primary export - PascalCase for components, camelCase for utilities.
+- **Hooks:** `use[Feature]` pattern (`useTestSuites`, `useHost`, `useTestCases`).
+- **Types/Interfaces:** PascalCase, no `I` prefix (`TestCase`, not `ITestCase`).
+
+## Component Standards
+- **Props:** Always define `interface Props` for component props.
+- **Destructuring:** Destructure props in function signature.
+- **Exports:** Use default export for main component, named exports for types.
+- **Example:**
+  ```typescript
+  interface Props {
+    testCase: TestCase;
+    onUpdate: (id: string) => void;
+  }
+
+  export default function TestCaseCard({ testCase, onUpdate }: Props) {
+    // component implementation
+  }
+  ```
+
+## Data Fetching Pattern
+- **Hook-based:** Create custom hooks in `/hooks/` for each data type.
+- **TanStack Query:** Use `useQuery` for fetching, `useMutation` for updates.
+- **Query Keys:** Use consistent array format: `['entity-name', ...dependencies]`.
+- **Example:**
+  ```typescript
+  export function useTestCases(options: UseTestCasesOptions) {
+    const host = useHost();
+    const api = createApi(host);
+    
+    return useQuery({
+      queryKey: ['test-cases', options.projectId, options.search],
+      queryFn: async () => api.project.testCases.GET(options),
+      enabled: Boolean(options.projectId),
+      staleTime: 30_000,
+    });
+  }
+  ```
+
+## Error Handling
+- **Backend:** Use proper HTTP status codes (400, 404, 500) and structured error responses.
+- **Frontend:** Handle errors in hooks/components with user-friendly messages.
+- **Async:** Always use `async/await`, handle `401/403` errors gracefully.
+
+## Type Safety
+- **No `any`:** Avoid using `any` type. Use `unknown` or proper types.
+- **Null Safety:** Always handle `null`/`undefined` cases.
+- **Type Guards:** Use type guards for runtime type checking when needed.
+
+# Specific YouTrack Constraints
+
+## Platform Integration
+- **Iframe:** App runs in iframe. Use `postMessage` for parent window communication if needed.
+- **Auth:** Auth handled via YouTrack App context (Hub). Never hardcode tokens.
+- **Context:** Access via `useHost()` hook in widgets.
+- **Project Scope:** Most operations are project-scoped. Always pass `projectId`.
+
+## Backend Scripting
+- **API:** Use `@jetbrains/youtrack-scripting-api/entities` for backend operations.
+- **Synchronous:** Backend route handlers run synchronously (no async/await).
+- **Extension Properties:** Use for storing lightweight metadata on projects/issues.
+- **Custom Fields:** Create and use custom fields for test-specific data.
+
+## Data Storage Strategy
+1. **Test Cases** → YouTrack Issues:
+   - Custom issue type or specific project type
+   - Custom fields: execution target, status, etc.
+   - Extension properties: additional metadata
+   - Leverages YouTrack search, workflows, and permissions
+
+2. **Test Suites** → Project Extension Properties:
+   - Stored as JSON in `extensionProperties.testSuites`
+   - Lightweight, fast access
+   - Contains test case IDs and hierarchy
+
+3. **Test Runs** → YouTrack Issues or Extension Properties:
+   - Can be issues for visibility or properties for performance
+   - Links to test cases and suites
+
+4. **Integrations** → Project Extension Properties:
+   - Integration configs in `extensionProperties.integrations`
+   - Secure storage for tokens and URLs
+
+# Testing Strategy
+
+## Unit Tests (`/tests/`)
+- **Framework:** Vitest (configured in `vitest.config.ts`).
+- **Structure:** Mirror source structure (`/domain`, `/application`, `/infrastructure`).
+- **Domain:** Pure business logic tests, 100% coverage goal.
+- **Application:** Use case tests with mocked repositories.
+- **Infrastructure:** Adapter tests, use in-memory implementations or mocks.
+- **Naming:** `[Feature].test.ts` or `test[Feature].ts`.
+
+## Test Helpers (`/tests/utils/`)
+- **Factories:** `test-factories.ts` for creating test data.
+- **Helpers:** `test-helpers.ts` for common test utilities.
+- **Setup:** `setup.ts` for test environment configuration.
+
+## Running Tests
+- `npm test` - Run all tests once
+- `npm run test:watch` - Run in watch mode
+- `npm run test:coverage` - Generate coverage report
+- `npm run test:ui` - Open Vitest UI
+
+# Development Workflow
+
+## Scripts
+- `npm run dev` - Start frontend dev server
+- `npm run build` - Build both backend and frontend
+- `npm run build:nolint` - Build without linting
+- `npm run watch:build` - Watch mode with auto-upload
+- `npm run lint` - Run ESLint
+- `npm run upload-local` - Upload to local YouTrack instance
+
+## File Generation
+- Backend routes auto-generate TypeScript types and Zod schemas
+- Run `npm run build:backend` to regenerate `api.d.ts` and `api.zod.ts`
+- Frontend build happens after backend to ensure types are available
+
+## Code Organization
+- Keep business logic in domain/application layers
+- Keep UI logic minimal - delegate to use cases
+- Keep infrastructure concerns isolated in adapters
+- Use dependency injection pattern for repositories
+- Prefer composition over inheritance
