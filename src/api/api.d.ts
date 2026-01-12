@@ -1,13 +1,13 @@
 import { ExtractRPCFromHandler } from "../backend/types/utility";
-import * as globaldemoGETHandler from "../backend/router/global/demo/GET";
 import * as globalsettingsGETHandler from "../backend/router/global/settings/GET";
 import * as globaltestCaseProjectGETHandler from "../backend/router/global/testCaseProject/GET";
+import * as globaldemoGETHandler from "../backend/router/global/demo/GET";
 import * as projectdemoGETHandler from "../backend/router/project/demo/GET";
+import * as projectsettingsGETHandler from "../backend/router/project/settings/GET";
 import * as projectintegrationsDELETEHandler from "../backend/router/project/integrations/DELETE";
 import * as projectintegrationsGETHandler from "../backend/router/project/integrations/GET";
 import * as projectintegrationsPOSTHandler from "../backend/router/project/integrations/POST";
 import * as projectintegrationsPUTHandler from "../backend/router/project/integrations/PUT";
-import * as projectsettingsGETHandler from "../backend/router/project/settings/GET";
 import * as projecttestCasesGETHandler from "../backend/router/project/testCases/GET";
 import * as projecttestCasesPOSTHandler from "../backend/router/project/testCases/POST";
 import * as projecttestCasesPUTHandler from "../backend/router/project/testCases/PUT";
@@ -27,14 +27,14 @@ import * as projectintegrations_integrationIdgitlabrefsGETHandler from "../backe
 
 export type ApiRouter = {
     global: {
-    demo: {
-    GET: ExtractRPCFromHandler<globaldemoGETHandler.Handle>;
-    };
     settings: {
     GET: ExtractRPCFromHandler<globalsettingsGETHandler.Handle>;
     };
     testCaseProject: {
     GET: ExtractRPCFromHandler<globaltestCaseProjectGETHandler.Handle>;
+    };
+    demo: {
+    GET: ExtractRPCFromHandler<globaldemoGETHandler.Handle>;
     };
     webhooks: {
     gitlab: {
@@ -45,6 +45,9 @@ export type ApiRouter = {
     project: {
     demo: {
     GET: ExtractRPCFromHandler<projectdemoGETHandler.Handle>;
+    };
+    settings: {
+    GET: ExtractRPCFromHandler<projectsettingsGETHandler.Handle>;
     };
     integrations: {
     DELETE: ExtractRPCFromHandler<projectintegrationsDELETEHandler.Handle>;
@@ -63,9 +66,6 @@ export type ApiRouter = {
     };
     };
     };
-    };
-    settings: {
-    GET: ExtractRPCFromHandler<projectsettingsGETHandler.Handle>;
     };
     testCases: {
     GET: ExtractRPCFromHandler<projecttestCasesGETHandler.Handle>;
