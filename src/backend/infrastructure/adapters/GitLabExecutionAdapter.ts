@@ -45,6 +45,13 @@ export class GitLabExecutionAdapter implements ExecutionTriggerPort {
 
     async trigger(testRun: TestRun): Promise<void> {
         console.log('=== GitLabExecutionAdapter START ===');
+        console.log('[GitLabExecutionAdapter] TestRun executionTarget:', {
+            integrationId: testRun.executionTarget.integrationId,
+            type: testRun.executionTarget.type,
+            name: testRun.executionTarget.name,
+            config: testRun.executionTarget.config,
+            configString: JSON.stringify(testRun.executionTarget.config)
+        });
         
         // Validate execution target type
         if (testRun.executionTarget.type !== ExecutionTargetType.GITLAB) {
@@ -56,22 +63,33 @@ export class GitLabExecutionAdapter implements ExecutionTriggerPort {
 
         // Extract branch/ref from ExecutionTargetSnapshot config
         const gitlabConfig = testRun.executionTarget.asGitLabConfig();
-        if (!gitlabConfig || !gitlabConfig.ref || gitlabConfig.ref.trim() === "") {
+        console.log('[GitLabExecutionAdapter] asGitLabConfig() result:', gitlabConfig);
+        console.log('[GitLabExecutionAdapter] Config keys:', gitlabConfig ? Object.keys(gitlabConfig) : 'null');
+        
+        // Support both 'ref' and 'pipelineRef' field names for backwards compatibility
+        const ref = (gitlabConfig as any)?.ref || (gitlabConfig as any)?.pipelineRef;
+        console.log('[GitLabExecutionAdapter] Extracted ref:', ref);
+        console.log('[GitLabExecutionAdapter] Has ref?', !!(gitlabConfig as any)?.ref);
+        console.log('[GitLabExecutionAdapter] Has pipelineRef?', !!(gitlabConfig as any)?.pipelineRef);
+        
+        if (!ref || ref.trim() === "") {
             throw new Error(
-                `GitLabExecutionConfig.ref is required for GitLab pipeline trigger. ` +
-                `TestRun ID: ${testRun.id}`
+                `GitLabExecutionConfig.ref or pipelineRef is required for GitLab pipeline trigger. ` +
+                `TestRun ID: ${testRun.id}, Config: ${JSON.stringify(gitlabConfig)}, ` +
+                `Raw config: ${JSON.stringify(testRun.executionTarget.config)}`
             );
         }
 
         console.log('Config:', {
             baseUrl: this.config.baseUrl,
             projectId: this.config.projectId,
-            ref: gitlabConfig.ref,
-            testRunId: testRun.id
+            ref: ref,
+            testRunId: testRun.id,
+            rawConfig: gitlabConfig
         });
 
         try {
-            const pipeline = await this.triggerPipeline(gitlabConfig.ref, testRun.id);
+            const pipeline = await this.triggerPipeline(ref, testRun.id);
             console.log('=== GitLab Pipeline Created ===');
             console.log('Pipeline:', {
                 id: pipeline.id,

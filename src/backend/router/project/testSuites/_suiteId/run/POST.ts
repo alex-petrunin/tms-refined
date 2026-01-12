@@ -52,11 +52,21 @@ export default function handle(ctx: CtxPost<RunTestSuiteReq, RunTestSuiteRes>): 
         console.log('[POST testSuites/run] Loaded test cases:', testCases.length);
         
         // Group test cases by execution target fingerprint
+        // Skip test cases without execution targets
         const groupedByTarget = new Map<string, {target: any, caseIds: string[]}>();
+        const skippedCases: string[] = [];
         
         for (const testCase of testCases) {
-            const target = testCase.executionTarget;
-            const fingerprint = target ? target.fingerprint() : 'no-target';
+            const target = testCase.executionTargetSnapshot;
+            
+            // Skip test cases without execution targets
+            if (!target) {
+                skippedCases.push(testCase.id);
+                console.log('[POST testSuites/run] Skipping test case without execution target:', testCase.id);
+                continue;
+            }
+            
+            const fingerprint = target.fingerprint();
             
             if (!groupedByTarget.has(fingerprint)) {
                 groupedByTarget.set(fingerprint, {
@@ -68,6 +78,20 @@ export default function handle(ctx: CtxPost<RunTestSuiteReq, RunTestSuiteRes>): 
         }
         
         console.log('[POST testSuites/run] Grouped into', groupedByTarget.size, 'target(s)');
+        if (skippedCases.length > 0) {
+            console.log('[POST testSuites/run] Skipped', skippedCases.length, 'test cases without execution targets:', skippedCases);
+        }
+        
+        // Check if there are any valid test cases to run
+        if (groupedByTarget.size === 0) {
+            const errorMsg = skippedCases.length > 0 
+                ? `Cannot run tests: All ${skippedCases.length} test case(s) are missing execution targets. Please configure execution targets for your test cases.`
+                : 'Cannot run tests: No test cases found.';
+            console.error('[POST testSuites/run]', errorMsg);
+            ctx.response.code = 400;
+            ctx.response.json({ error: errorMsg } as any);
+            return;
+        }
         
         // Build infrastructure
         const integrationRepo = new YouTrackIntegrationRepository();

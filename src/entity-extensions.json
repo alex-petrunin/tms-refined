@@ -35,6 +35,14 @@
           "type": "string",
           "description": "Execution target reference (pipeline/workflow ID)"
         },
+        "executionTargetConfig": {
+          "type": "string",
+          "description": "Execution target configuration as JSON string"
+        },
+        "executionTargetIntegrationId": {
+          "type": "string",
+          "description": "Integration ID for execution target (new property name)"
+        },
         "testRunId": {
           "type": "string",
           "description": "Unique identifier for the test run"

@@ -312,7 +312,48 @@ export const IntegrationsView = memo<IntegrationsViewProps>(({projectId}) => {
               </div>
             </div>
 
-            {(formData.type === 'GITLAB' || formData.type === 'GITHUB') && (
+            {formData.type === 'GITLAB' && (
+              <>
+                <div className="form-field">
+                  <label>Base URL</label>
+                  <Input
+                    value={formData.config.baseUrl || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({
+                      ...formData, 
+                      config: {...formData.config, baseUrl: e.target.value}
+                    })}
+                    placeholder="https://gitlab.com"
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label>Project ID</label>
+                  <Input
+                    value={formData.config.projectId || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({
+                      ...formData, 
+                      config: {...formData.config, projectId: e.target.value}
+                    })}
+                    placeholder="75214400 or namespace/project"
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label>Pipeline Trigger Token</label>
+                  <Input
+                    value={formData.config.token || ''}
+                    type="password"
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({
+                      ...formData, 
+                      config: {...formData.config, token: e.target.value}
+                    })}
+                    placeholder="glptt-xxxxx (from Settings → CI/CD → Pipeline triggers)"
+                  />
+                </div>
+              </>
+            )}
+
+            {formData.type === 'GITHUB' && (
               <>
                 <div className="form-field">
                   <label>Project URL</label>
@@ -322,14 +363,12 @@ export const IntegrationsView = memo<IntegrationsViewProps>(({projectId}) => {
                       ...formData, 
                       config: {...formData.config, projectUrl: e.target.value}
                     })}
-                    placeholder={formData.type === 'GITLAB' 
-                      ? 'https://gitlab.com/org/project' 
-                      : 'https://github.com/org/repo'}
+                    placeholder="https://github.com/org/repo"
                   />
                 </div>
 
                 <div className="form-field">
-                  <label>{formData.type === 'GITLAB' ? 'Pipeline Ref' : 'Workflow Ref'}</label>
+                  <label>Workflow Ref</label>
                   <Input
                     value={formData.config.pipelineRef || ''}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({
@@ -349,7 +388,7 @@ export const IntegrationsView = memo<IntegrationsViewProps>(({projectId}) => {
                       ...formData, 
                       config: {...formData.config, token: e.target.value}
                     })}
-                    placeholder="For triggering pipelines"
+                    placeholder="For triggering workflows"
                   />
                 </div>
               </>

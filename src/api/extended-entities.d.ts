@@ -13,6 +13,8 @@ export interface ExtendedIssue extends Issue {
   readonly executionTargetName?: string;
   readonly executionTargetType?: string;
   readonly executionTargetRef?: string;
+  readonly executionTargetConfig?: string;
+  readonly executionTargetIntegrationId?: string;
   readonly testRunId?: string;
   readonly testRunStatus?: string;
   readonly testSuiteId?: string;

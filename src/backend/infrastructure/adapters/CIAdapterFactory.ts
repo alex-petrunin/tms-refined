@@ -119,34 +119,41 @@ export class CIAdapterFactory {
         let baseUrl = integrationConfig.baseUrl || 'https://gitlab.com';
         let projectId = integrationConfig.projectId || '';
         
-        if (integrationConfig.projectUrl && !projectId) {
-            // Parse URL: https://gitlab.com/tms-app1/integration-1
-            // -> baseUrl: https://gitlab.com
-            // -> projectId: tms-app1/integration-1
-            try {
-                const urlString = integrationConfig.projectUrl;
-                // Find the third slash (after https://)
-                const protocolEnd = urlString.indexOf('://');
-                if (protocolEnd > -1) {
-                    const afterProtocol = urlString.substring(protocolEnd + 3);
-                    const firstSlash = afterProtocol.indexOf('/');
-                    
-                    if (firstSlash > -1) {
-                        baseUrl = urlString.substring(0, protocolEnd + 3 + firstSlash);
-                        projectId = afterProtocol.substring(firstSlash + 1);
-                    } else {
-                        // No path, just domain
-                        baseUrl = urlString;
+        if (integrationConfig.projectUrl) {
+            const urlString = integrationConfig.projectUrl;
+            
+            // Check if projectUrl is a full URL or just a project ID
+            if (urlString.startsWith('http://') || urlString.startsWith('https://')) {
+                // Full URL: https://gitlab.com/tms-app1/integration-1
+                // -> baseUrl: https://gitlab.com
+                // -> projectId: tms-app1/integration-1
+                try {
+                    const protocolEnd = urlString.indexOf('://');
+                    if (protocolEnd > -1) {
+                        const afterProtocol = urlString.substring(protocolEnd + 3);
+                        const firstSlash = afterProtocol.indexOf('/');
+                        
+                        if (firstSlash > -1) {
+                            baseUrl = urlString.substring(0, protocolEnd + 3 + firstSlash);
+                            projectId = afterProtocol.substring(firstSlash + 1);
+                        } else {
+                            // No path, just domain
+                            baseUrl = urlString;
+                        }
                     }
+                    
+                    console.log('[CIAdapterFactory] Parsed full projectUrl:', {
+                        original: integrationConfig.projectUrl,
+                        baseUrl: baseUrl,
+                        projectId: projectId
+                    });
+                } catch (e) {
+                    console.error('[CIAdapterFactory] Failed to parse projectUrl:', e);
                 }
-                
-                console.log('[CIAdapterFactory] Parsed projectUrl:', {
-                    original: integrationConfig.projectUrl,
-                    baseUrl: baseUrl,
-                    projectId: projectId
-                });
-            } catch (e) {
-                console.error('[CIAdapterFactory] Failed to parse projectUrl:', e);
+            } else {
+                // Just a project ID (numeric or path): "75214400" or "group/project"
+                projectId = urlString;
+                console.log('[CIAdapterFactory] Using projectUrl as projectId:', projectId);
             }
         }
         

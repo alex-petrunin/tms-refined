@@ -12,7 +12,9 @@ export interface ProviderSpecificConfig {
  */
 export interface GitLabExecutionConfig extends ProviderSpecificConfig {
     /** Branch or tag name to run the pipeline on */
-    ref: string;
+    ref?: string;
+    /** Branch or tag name (alternative field name for backwards compatibility) */
+    pipelineRef?: string;
 }
 
 /**
